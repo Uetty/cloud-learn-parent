@@ -37,7 +37,8 @@
 	</dependencyManagement>
 
 	<modules>
-		
+
+		<module>cloud-eureka-server</module>
 	</modules>
 
 </project>
