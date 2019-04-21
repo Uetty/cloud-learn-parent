@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: eurekaServer-3
+
+server:
+  port: 8763
+
+eureka:
+  instance:
+    hostname: server3
+    prefer-ip-address: true
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+    service-url:
+      defaultZone: http://127.0.0.1:8761,http://localhost:8762
+
+logging:
+  level:
+    com:
+      netflix:
+        eureka: OFF
+        discovery: OFF
