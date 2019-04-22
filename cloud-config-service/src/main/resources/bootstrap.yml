@@ -1,7 +1,8 @@
 spring:
   profiles: dev
+  edition: '@project.version@'
   application:
-    name: config-service
+    name: config-provider
   cloud:
     service-registry:
       auto-registration:

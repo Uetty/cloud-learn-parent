@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.uetty.cloud.feign.provider.mapper.ConfigMapper">
+	<resultMap id="BaseResultMap" type="com.uetty.cloud.feign.api.entity.Config">
+		<result column="name" jdbcType="VARCHAR" property="name" />
+		<result column="prop_value" jdbcType="VARCHAR" property="propValue" />
+		<result column="note" jdbcType="VARCHAR" property="note" />
+	</resultMap>
+	<sql id="Base_Column_List">
+		name, prop_value, note
+	</sql>
+	
+	<insert id="insert" parameterType="com.uetty.cloud.feign.api.entity.Config">
+		insert into t_config (name, prop_value, note
+		)
+		values (#{name,jdbcType=VARCHAR}, #{propValue,jdbcType=VARCHAR},
+		#{note,jdbcType=VARCHAR}
+		)
+	</insert>
+	<insert id="insertSelective" parameterType="com.uetty.cloud.feign.api.entity.Config">
+		insert into t_config
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="name != null">
+				name,
+			</if>
+			<if test="propValue != null">
+				prop_value,
+			</if>
+			<if test="note != null">
+				note,
+			</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="name != null">
+				#{name,jdbcType=VARCHAR},
+			</if>
+			<if test="propValue != null">
+				#{propValue,jdbcType=VARCHAR},
+			</if>
+			<if test="note != null">
+				#{note,jdbcType=VARCHAR},
+			</if>
+		</trim>
+	</insert>
+	
+	<select id="getConfig" parameterType="java.lang.String"
+		resultMap="BaseResultMap">
+		select
+		<include refid="Base_Column_List" />
+		from t_config
+		where name = #{name,jdbcType=VARCHAR}
+	</select>
+</mapper>

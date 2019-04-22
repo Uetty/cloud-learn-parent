@@ -1,0 +1,16 @@
+spring:
+  profiles: dev
+  edition: '@project.version@'
+  application:
+    name: feign-provider
+  cloud:
+    config:
+      discovery:
+        enabled: true                                  # 表示使用服务发现组件中的Config Server，而不自己指定Config Server的uri，默认false
+        service-id: config-provider  # 指定Config Server在服务发现中的serviceId，默认是configserver
+
+server:
+  port: 8081
+
+mybatis:
+  mapper-locations: classpath:/mapper/*Mapper.xml

@@ -29,10 +29,11 @@
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-dependencies</artifactId>
-                <version>Finchley.SR2</version>
+                <version>Finchley.RELEASE</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+
 
             <dependency>
                 <groupId>org.mybatis.spring.boot</groupId>
@@ -45,14 +46,17 @@
                 <artifactId>druid</artifactId>
                 <version>1.1.13</version>
             </dependency>
+
         </dependencies>
+
     </dependencyManagement>
 
     <modules>
 
         <module>cloud-eureka-server</module>
         <module>cloud-config-service</module>
-        <module>cloud-feign-service</module>
+        <module>cloud-feign-provider</module>
+        <module>cloud-feign-api</module>
     </modules>
 
 </project>

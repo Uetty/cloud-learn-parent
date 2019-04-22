@@ -1,6 +1,7 @@
 --- # all eureka
 spring:
   profiles: eureka-1,eureka-2,eureka-3
+  edition: '@project.version@'
 eureka:
   client:
     register-with-eureka: false
