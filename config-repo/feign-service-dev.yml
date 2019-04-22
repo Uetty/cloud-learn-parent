@@ -3,8 +3,13 @@ test:
 
 spring:
   datasource:
+    maxActive: 20
+    maxWait: 60000
+    initialSize: 1
+    validationQuery: 'select "x"'
     dbType: mysql
     type: com.alibaba.druid.pool.DruidDataSource
     driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost/dbo?useSSL=false&serverTimezone=UTC
     username: root
-    password:
+    password: '{cipher}AQBkgNhXHJIoPCJcD4mJ2b5KM6KBE6AntLR19e6UVz2HmNGpfh321I5O6Wu4ahUMxtnYfEBXWhuvDSMpS68I/pHhGMS6uf7qL6pLSYv4n5Gw1O82YAMxQAxdkeeLD9Pu0QPjajZ/uCJNnDFnZRXS29OIw5nHwm1Z6X8ofD22UkGY22URFYO2TRYz7O4d/9vrNb1O2anIdjOVyumwzSDDQrqDrWmv1O3DYFElcCAoqUlEGmy3ErroTLuFnHeFhVqoFb9Y0XSZ8G/eg2c0jHn5X3BzOg4AWflklXSNiUFjz9n0zlwKBNgFGnRK/oamBkLEozlWuT+7vWM+wHwRFm0QvTuGYt80Eh0Bh0/8MXbqIsq+9gHXyGyZMUuMylDtEcgPAN8='

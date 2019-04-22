@@ -7,6 +7,15 @@ spring:
       auto-registration:
         enabled: true
 
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://eureka-1:8761/eureka/,http://eureka-2:8762/eureka/,http://eureka-3:8763/eureka/
+  instance:
+    prefer-ip-address: false
+    lease-expiration-duration-in-seconds: 90    # 过期时间
+    lease-renewal-interval-in-seconds: 28    # 续约间隔
+
 encrypt:
   key: l7lao4-pjo1d91i2i1f
   keyStore:
