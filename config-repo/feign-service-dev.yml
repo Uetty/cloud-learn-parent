@@ -3,13 +3,13 @@ test:
 
 spring:
   datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
     maxActive: 20
     maxWait: 60000
     initialSize: 1
     validationQuery: 'select "x"'
     dbType: mysql
-    type: com.alibaba.druid.pool.DruidDataSource
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost/dbo?useSSL=false&serverTimezone=UTC
-    username: root
-    password: '{cipher}AQBkgNhXHJIoPCJcD4mJ2b5KM6KBE6AntLR19e6UVz2HmNGpfh321I5O6Wu4ahUMxtnYfEBXWhuvDSMpS68I/pHhGMS6uf7qL6pLSYv4n5Gw1O82YAMxQAxdkeeLD9Pu0QPjajZ/uCJNnDFnZRXS29OIw5nHwm1Z6X8ofD22UkGY22URFYO2TRYz7O4d/9vrNb1O2anIdjOVyumwzSDDQrqDrWmv1O3DYFElcCAoqUlEGmy3ErroTLuFnHeFhVqoFb9Y0XSZ8G/eg2c0jHn5X3BzOg4AWflklXSNiUFjz9n0zlwKBNgFGnRK/oamBkLEozlWuT+7vWM+wHwRFm0QvTuGYt80Eh0Bh0/8MXbqIsq+9gHXyGyZMUuMylDtEcgPAN8='
+    url: jdbc:mysql://118.25.54.197/aiclub?useSSL=false&serverTimezone=UTC
+    username: uetty
+    password: '{cipher}AQAQA9PslvAtvJSwg/bjzgnYYZDX65TLOkqGd9iLC4Y9gy8PE4uZjsSZGRfS6y+yGCmri/ypiq+5MvldLl8RXeV1847LHBQKc0cl1Hg/z4pVp9MN2q80MXFUmfwXLJPlrFwlgupmTqkHu18L4ZGd3disN6sy+GxCQB8TguRxXZpIdqIOg2ty999Jd4qY+DFU7L8sP4z7zn4dbCwUuQaj6TuhixA1U+cS1P+OCOFLLk6vYn7aiOwgJI/dnZM4OBqblGle3QIybsF4VfxyqOlSCqz4LesdTYnNlVTJnrgkUzDZ0B+eAaEgiNbaY5V7gTOmSGbAxk/s3qMfSgunxpCO4GKD8D5+jOd9fdCGHUd+60SdDHUtvrkQ2F6PkcZFi4Yy7JA='
