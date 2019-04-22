@@ -5,7 +5,7 @@
     <parent>
         <artifactId>cloud-learn-parent</artifactId>
         <groupId>com.uetty</groupId>
-        <version>1.0.0</version>
+        <version>1.0.1-M</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
