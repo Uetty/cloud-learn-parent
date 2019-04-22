@@ -1,15 +1,10 @@
-server:
-  port: 8888
-
 management:
   context-path: /admin
-logging:
-  level:
-    com.netflix.discovery: 'OFF'
-    org.springframework.cloud: 'DEBUG'
 
 encrypt:
   keyStore:
     location: classpath:keystore.jks
-    password: ${KEYSTORE_PASSWORD:123456a}
+    password: ${KEYSTORE_PASSWORD:}
     alias: testkey
+
+

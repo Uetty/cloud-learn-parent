@@ -8,13 +8,9 @@ spring:
         enabled: true
 
 eureka:
-  instance:
-    metadataMap:
-      zone: zone1
   client:
-    preferSameZoneEureka: true
     serviceUrl:
-      defaultZone: http://eureka-1:8761/eureka/
+      defaultZone: http://eureka-1:8761/eureka/,http://eureka-2:8762/eureka/,http://eureka-3:8763/eureka/
 
 
 #  /{application}/{profile}[/{label}]

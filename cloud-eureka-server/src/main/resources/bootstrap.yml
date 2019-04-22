@@ -1,3 +1,22 @@
+--- # all eureka
+spring:
+  profiles: eureka-1,eureka-2,eureka-3
+eureka:
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+  instance:
+    prefer-ip-address: false
+
+management:
+  context-path: /admin
+
+logging:
+  level:
+    com.netflix:
+      eureka: OFF
+      discovery: OFF
+
 --- # eureka-1
 
 spring:
@@ -11,20 +30,9 @@ server:
 eureka:
   instance:
     hostname: eureka-1
-    instance-id: ${eureka.instance.hostname}:${server.port}
-    prefer-ip-address: true
   client:
-    register-with-eureka: false
-    fetch-registry: false
-    service-url:
-      defaultZone: http://eureka-2:8762,http://eureka-3:8763
-
-logging:
-  level:
-    com:
-      netflix:
-        eureka: OFF
-        discovery: OFF
+    serviceUrl:
+      defaultZone: http://eureka-2:8762/eureka/,http://eureka-3:8763/eureka/
 
 
 --- # eureka-2
@@ -40,21 +48,9 @@ server:
 eureka:
   instance:
     hostname: eureka-2
-    instance-id: ${eureka.instance.hostname}:${server.port}
-    prefer-ip-address: true
   client:
-    register-with-eureka: false
-    fetch-registry: false
-    service-url:
-      defaultZone: http://eureka-1:8761,http://eureka-3:8763
-
-logging:
-  level:
-    com:
-      netflix:
-        eureka: OFF
-        discovery: OFF
-
+    serviceUrl:
+      defaultZone: http://eureka-1:8761/eureka/,http://eureka-3:8763/eureka/
 
 --- # eureka-3
 
@@ -69,17 +65,6 @@ server:
 eureka:
   instance:
     hostname: eureka-3
-    instance-id: ${eureka.instance.hostname}:${server.port}
-    prefer-ip-address: true
   client:
-    register-with-eureka: false
-    fetch-registry: false
-    service-url:
-      defaultZone: http://eureka-1:8761,http://eureka-2:8762
-
-logging:
-  level:
-    com:
-      netflix:
-        eureka: OFF
-        discovery: OFF
+    serviceUrl:
+      defaultZone: http://eureka-1:8761/eureka/,http://eureka-2:8762/eureka/
