@@ -1,5 +1,5 @@
 test:
-  prop: test-prop-2
+  prop: controller-prop-2
 
 spring:
   datasource:
