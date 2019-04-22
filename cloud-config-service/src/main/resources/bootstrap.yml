@@ -7,6 +7,12 @@ spring:
       auto-registration:
         enabled: true
 
+encrypt:
+  key: l7lao4-pjo1d91i2i1f
+  keyStore:
+    location: classpath:keystore.jks
+    password: ${KEYSTORE_PASSWORD:}
+    alias: testkey
 #  /{application}/{profile}[/{label}]
 #  /{application}-{profile}.yml
 #  /{label}/{application}-{profile}.yml
