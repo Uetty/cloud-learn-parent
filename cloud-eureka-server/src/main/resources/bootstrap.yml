@@ -10,7 +10,7 @@ eureka:
     lease-expiration-duration-in-seconds: 90    # 过期时间
     lease-renewal-interval-in-seconds: 28    # 续约间隔
   server:
-    enable-self-preservation: true    # 自我保护模式
+    enable-self-preservation: false    # 自我保护模式
     eviction-interval-timer-in-ms: 60    # 清理无效节点时间
 
 management:

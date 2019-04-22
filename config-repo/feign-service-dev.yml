@@ -1,2 +1,10 @@
 test:
   prop: test-prop-2
+
+spring:
+  datasource:
+    dbType: mysql
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password:
