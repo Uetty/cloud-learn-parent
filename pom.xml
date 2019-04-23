@@ -5,7 +5,7 @@
 
     <groupId>com.uetty</groupId>
     <artifactId>cloud-learn-parent</artifactId>
-    <version>1.0.1-M</version>
+    <version>1.1.0</version>
     <packaging>pom</packaging>
 
     <parent>
@@ -57,6 +57,7 @@
         <module>cloud-config-service</module>
         <module>cloud-feign-provider</module>
         <module>cloud-feign-api</module>
+        <module>cloud-feign-facade</module>
     </modules>
 
 </project>
