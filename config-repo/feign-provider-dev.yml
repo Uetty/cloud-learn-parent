@@ -1,6 +1,3 @@
-test:
-  prop: controller-prop-2
-
 spring:
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
