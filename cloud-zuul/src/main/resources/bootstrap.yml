@@ -1,0 +1,33 @@
+spring:
+  profiles: dev
+  edition: '@project.version@'
+  application:
+    name: feign-facade
+  cloud:
+    config:
+      label: '@project.version@'    # 回滚到旧版本时需要使用这个参数，将注释打开即可
+      discovery:
+        enabled: true                                  # 表示使用服务发现组件中的Config Server，而不自己指定Config Server的uri，默认false
+        service-id: config-provider  # 指定Config Server在服务发现中的serviceId，默认是configserver
+    service-registry:
+      auto-registration:
+        enable: true
+
+server:
+  port: 80
+
+eureka:
+  client:
+    register-with-eureka: false
+    fetch-registry: true
+    serviceUrl:
+      defaultZone: http://eureka-1:8761/eureka/,http://eureka-2:8762/eureka/,http://eureka-3:8763/eureka/
+
+management:
+  context-path: /admin
+
+logging:
+  level:
+    com.netflix:
+      eureka: OFF
+      discovery: OFF
