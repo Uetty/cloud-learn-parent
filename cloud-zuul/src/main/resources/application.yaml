@@ -1,0 +1,27 @@
+server:
+  port: 80
+spring:
+  application:
+    name: geteway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+      routes: #RouteDefinition 数组
+        - uri: lb://feign-facade #目标服务地址  /info必须使用http进行转发，lb代表从注册中心获取服务
+          predicates: #路由条件  PredicateDefinition
+            - Path= /facade/**
+        - uri: http://localhost:8761
+          id: eureka
+          predicates:
+            - Path= /eureka
+          filters:
+            - StripPrefix= 1
+
+eureka:
+  client:
+    register-with-eureka: false
+    fetch-registry: true
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/,http://localhost:8762/eureka/,http://localhost:8763/eureka/
