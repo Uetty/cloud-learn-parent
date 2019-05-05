@@ -1,4 +1,4 @@
-package com.uetty.utils;
+package com.uetty.cloud.utils;
 
 /**
  * 代码块耗时计算

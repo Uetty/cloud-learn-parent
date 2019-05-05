@@ -5,7 +5,7 @@
     <parent>
         <artifactId>cloud-learn-parent</artifactId>
         <groupId>com.uetty</groupId>
-        <version>1.1.0</version>
+        <version>${revision}</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -26,6 +26,10 @@
             <artifactId>spring-cloud-config-client</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.mybatis.spring.boot</groupId>
+            <artifactId>mybatis-spring-boot-starter</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>mysql</groupId>
@@ -35,7 +39,7 @@
         <dependency>
             <artifactId>cloud-feign-api</artifactId>
             <groupId>com.uetty</groupId>
-            <version>${project.version}</version>
+            <version>${revision}</version>
         </dependency>
     </dependencies>
 
