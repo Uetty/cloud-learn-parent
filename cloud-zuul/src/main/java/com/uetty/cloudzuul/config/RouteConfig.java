@@ -11,12 +11,18 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RouteConfig {
 
+    private static String HYSTRIX_NAME = "GLOBAL_HYSTRIX_NAME";
+
+    private static String HYSTRIX_URI = "forward:/global/hystrix";
+
     @Bean
     public RouteLocator myRoutes(RouteLocatorBuilder builder) {
         return builder.routes()
-                .route(p -> p
-                        .path("/model")
-                        .uri("lb://model"))
+                .route(p -> p.path("/**")
+                        .filters(f -> f.hystrix(config ->
+                                config.setName(HYSTRIX_NAME)
+                                        .setFallbackUri(HYSTRIX_URI))
+                        ).uri(""))
                 .build();
     }
 

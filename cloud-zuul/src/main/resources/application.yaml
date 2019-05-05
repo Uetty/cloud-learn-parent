@@ -12,12 +12,26 @@ spring:
         - uri: lb://feign-facade #目标服务地址  /info必须使用http进行转发，lb代表从注册中心获取服务
           predicates: #路由条件  PredicateDefinition
             - Path= /facade/**
+          filters:
+            - name: Hystrix
+                args:
+                  name: GLOBAL_HYSTRIX_NAME
+                  fallbackUri: forward:/global/hystrix
         - uri: http://localhost:8761
           id: eureka
           predicates:
             - Path= /eureka
           filters:
             - StripPrefix= 1
+      globalcors: #全局跨域
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "https://docs.spring.io"
+            allowedMethods:
+              - GET
+
+
+
 
 eureka:
   client:
