@@ -5,7 +5,7 @@
 
     <groupId>com.uetty</groupId>
     <artifactId>cloud-learn-parent</artifactId>
-    <version>1.2.1-Beta</version>
+    <version>1.2.2-Beta</version>
     <packaging>pom</packaging>
 
     <parent>
