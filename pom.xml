@@ -5,7 +5,7 @@
 
     <groupId>com.uetty</groupId>
     <artifactId>cloud-learn-parent</artifactId>
-    <version>${revision}</version>
+    <version>1.2.1-Beta</version>
     <packaging>pom</packaging>
 
     <parent>
@@ -15,7 +15,6 @@
     </parent>
 
     <properties>
-        <revision>1.2.1-Beta</revision>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>1.8</java.version>
     </properties>
@@ -69,6 +68,7 @@
                 <artifactId>mybatis-spring-boot-starter</artifactId>
                 <version>2.0.0</version>
             </dependency>
+
         </dependencies>
     </dependencyManagement>
 
@@ -83,4 +83,18 @@
         <module>common</module>
     </modules>
 
+    <build>
+        <plugins>
+            <!-- 一键更新子模块版本号 -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>versions-maven-plugin</artifactId>
+                <version>2.7</version>
+                <configuration>
+                    <generateBackupPoms>false</generateBackupPoms>
+                </configuration>
+            </plugin>
+            <!-- mvn -N versions:update-child-modules -->
+        </plugins>
+    </build>
 </project>

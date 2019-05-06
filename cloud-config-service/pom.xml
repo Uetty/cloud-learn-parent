@@ -5,7 +5,8 @@
     <parent>
         <artifactId>cloud-learn-parent</artifactId>
         <groupId>com.uetty</groupId>
-        <version>${revision}</version>
+        <version>1.2.1-Beta</version>
+        <relativePath>../</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -19,6 +20,17 @@
     </dependencies>
 
     <build>
+
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>com.uetty.cloud.config.ConfigServiceApp</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+
         <resources>
             <resource>
                 <directory>src/main/resources</directory>

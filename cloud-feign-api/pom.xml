@@ -5,7 +5,8 @@
     <parent>
         <artifactId>cloud-learn-parent</artifactId>
         <groupId>com.uetty</groupId>
-        <version>${revision}</version>
+        <version>1.2.1-Beta</version>
+        <relativePath>../</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 

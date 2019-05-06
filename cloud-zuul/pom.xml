@@ -5,7 +5,8 @@
     <parent>
         <groupId>com.uetty</groupId>
         <artifactId>cloud-learn-parent</artifactId>
-        <version>${revision}</version>
+        <version>1.2.1-Beta</version>
+        <relativePath>../</relativePath>
     </parent>
     <artifactId>cloud-zuul</artifactId>
     <name>cloud-zuul</name>
@@ -18,15 +19,11 @@
         <dependency>
             <groupId>com.uetty</groupId>
             <artifactId>common</artifactId>
-            <version>${revision}</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-gateway</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-netflix-hystrix</artifactId>
         </dependency>
     </dependencies>
 
@@ -35,6 +32,9 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>com.uetty.cloudzuul.CloudZuulApplication</mainClass>
+                </configuration>
             </plugin>
         </plugins>
     </build>
