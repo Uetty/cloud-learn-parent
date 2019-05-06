@@ -21,10 +21,7 @@ eureka:
     register-with-eureka: false
     fetch-registry: true
     serviceUrl:
-      defaultZone: http://eureka-1:8761/eureka/,http://eureka-2:8762/eureka/,http://eureka-3:8763/eureka/
-
-management:
-  context-path: /admin
+      defaultZone: http://118.25.54.197:8761/eureka/
 
 logging:
   level:
