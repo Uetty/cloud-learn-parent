@@ -14,14 +14,15 @@ import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactor
 @Configuration
 public class RuleRedis {
 
+    @Bean
     @ConfigurationProperties(prefix = "spring.redis.rule")
-    public RedisConfig getRedisConfig() {
+    public RedisConfig ruleRedisConfig() {
         return new RedisConfig();
     }
 
     @Bean
     public RuleRedisTemplate redisTemplate() {
-        return new RuleRedisTemplate(connectionFactory(getRedisConfig()));
+        return new RuleRedisTemplate(connectionFactory(ruleRedisConfig()));
     }
 
     public ReactiveRedisConnectionFactory connectionFactory(RedisConfig redisConfig) {

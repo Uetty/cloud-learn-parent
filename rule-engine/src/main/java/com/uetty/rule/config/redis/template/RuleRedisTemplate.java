@@ -7,7 +7,7 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 public class RuleRedisTemplate extends ReactiveStringRedisTemplate {
 
     public RuleRedisTemplate(ReactiveRedisConnectionFactory connectionFactory) {
-        super(connectionFactory);
+        super(connectionFactory, RedisSerializationContext.string());
     }
 
     public RuleRedisTemplate(ReactiveRedisConnectionFactory connectionFactory, RedisSerializationContext<String, String> serializationContext) {
