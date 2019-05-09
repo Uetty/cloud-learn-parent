@@ -81,6 +81,7 @@
         <module>cloud-feign-facade</module>
         <module>cloud-zuul</module>
         <module>common</module>
+        <module>rule-engine</module>
     </modules>
 
     <build>

@@ -3,20 +3,20 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.uetty</groupId>
         <artifactId>cloud-learn-parent</artifactId>
+        <groupId>com.uetty</groupId>
         <version>1.2.2-Beta</version>
         <relativePath>../</relativePath>
     </parent>
-    <artifactId>common</artifactId>
-    <name>common</name>
-    <description>Demo project for Spring Boot</description>
 
-    <properties>
-        <java.version>1.8</java.version>
-    </properties>
+    <artifactId>rule-engine</artifactId>
 
     <dependencies>
+        <dependency>
+            <artifactId>common</artifactId>
+            <groupId>com.uetty</groupId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -25,7 +25,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                   <skip>true</skip>
+                    <mainClass>com.uetty.rule.RuleEngineApplication</mainClass>
                 </configuration>
             </plugin>
         </plugins>
