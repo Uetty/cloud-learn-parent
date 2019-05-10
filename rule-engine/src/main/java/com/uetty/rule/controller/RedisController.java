@@ -1,11 +1,12 @@
 package com.uetty.rule.controller;
 
+import com.google.common.collect.Lists;
 import com.uetty.rule.config.redis.template.RedisTemplateRule;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.script.RedisScript;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @RestController
 @RequestMapping("/redis")
@@ -13,13 +14,16 @@ public class RedisController {
 
     private final RedisTemplateRule redisTemplateRule;
 
+
+    private DefaultRedisScript<Object> hget;
+
     @Autowired
     public RedisController(RedisTemplateRule redisTemplateRule) {
         this.redisTemplateRule = redisTemplateRule;
     }
 
     @RequestMapping("/script")
-    public Flux<Object> script() {
-        return redisTemplateRule.execute(RedisScript.of("eval \"return {KEYS[1],KEYS[2],ARGV[1],ARGV[2]}\" 2 key1 key2 first second"));
+    public Mono script() {
+        return redisTemplateRule.execute(hget, Lists.newArrayList("aaa"), Lists.newArrayList("1")).collectList();
     }
 }

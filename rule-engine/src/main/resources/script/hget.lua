@@ -1,0 +1,1 @@
+return redis.call("hget",KEYS[1],ARGV[1]);
