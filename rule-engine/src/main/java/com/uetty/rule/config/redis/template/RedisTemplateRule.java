@@ -4,17 +4,17 @@ import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 
-public class RuleRedisTemplate extends ReactiveStringRedisTemplate {
+public class RedisTemplateRule extends ReactiveStringRedisTemplate {
 
-    public RuleRedisTemplate(ReactiveRedisConnectionFactory connectionFactory) {
+    public RedisTemplateRule(ReactiveRedisConnectionFactory connectionFactory) {
         super(connectionFactory, RedisSerializationContext.string());
     }
 
-    public RuleRedisTemplate(ReactiveRedisConnectionFactory connectionFactory, RedisSerializationContext<String, String> serializationContext) {
+    public RedisTemplateRule(ReactiveRedisConnectionFactory connectionFactory, RedisSerializationContext<String, String> serializationContext) {
         super(connectionFactory, serializationContext);
     }
 
-    public RuleRedisTemplate(ReactiveRedisConnectionFactory connectionFactory, RedisSerializationContext<String, String> serializationContext, boolean exposeConnection) {
+    public RedisTemplateRule(ReactiveRedisConnectionFactory connectionFactory, RedisSerializationContext<String, String> serializationContext, boolean exposeConnection) {
         super(connectionFactory, serializationContext, exposeConnection);
     }
 }

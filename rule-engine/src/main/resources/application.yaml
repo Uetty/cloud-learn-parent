@@ -3,9 +3,9 @@ spring:
     name: rule-engine
   redis:
     rule:
-      host: 118.25.54.197
+      host: 127.0.0.1
       port: 6379
-      password: 123456
+      password:
       dbIndex: 5
 
 

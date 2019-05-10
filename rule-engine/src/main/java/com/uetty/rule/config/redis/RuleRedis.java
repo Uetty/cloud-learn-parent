@@ -1,6 +1,6 @@
 package com.uetty.rule.config.redis;
 
-import com.uetty.rule.config.redis.template.RuleRedisTemplate;
+import com.uetty.rule.config.redis.template.RedisTemplateRule;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,8 +21,8 @@ public class RuleRedis {
     }
 
     @Bean
-    public RuleRedisTemplate ruleRedisTemplate(RedisConfig ruleRedisConfig) {
-        return new RuleRedisTemplate(ruleConnectionFactory(ruleRedisConfig));
+    public RedisTemplateRule ruleRedisTemplate(RedisConfig ruleRedisConfig) {
+        return new RedisTemplateRule(ruleConnectionFactory(ruleRedisConfig));
     }
 
     private ReactiveRedisConnectionFactory ruleConnectionFactory(RedisConfig ruleRedisConfig) {
@@ -31,7 +31,9 @@ public class RuleRedis {
         configuration.setHostName(ruleRedisConfig.getHost());
         configuration.setPort(ruleRedisConfig.getPort());
         configuration.setPassword(ruleRedisConfig.getPassword());
-        return new LettuceConnectionFactory(configuration);
+        LettuceConnectionFactory factory = new LettuceConnectionFactory(configuration);
+        factory.afterPropertiesSet();
+        return factory;
     }
 
 
