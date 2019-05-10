@@ -15,11 +15,12 @@ public class RedisController {
     private final RedisTemplateRule redisTemplateRule;
 
 
-    private DefaultRedisScript<Object> hget;
+    private final DefaultRedisScript<Object> hget;
 
     @Autowired
-    public RedisController(RedisTemplateRule redisTemplateRule) {
+    public RedisController(RedisTemplateRule redisTemplateRule, DefaultRedisScript<Object> hget) {
         this.redisTemplateRule = redisTemplateRule;
+        this.hget = hget;
     }
 
     @RequestMapping("/script")

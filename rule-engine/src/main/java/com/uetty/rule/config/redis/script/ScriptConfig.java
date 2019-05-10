@@ -29,14 +29,15 @@ public class ScriptConfig {
      */
     @PostConstruct
     public void initScript() {
-        File file = new File(this.getClass().getResource(luaPath).getPath());
+        String path = this.getClass().getResource(luaPath).getPath();
+        File file = new File(path);
         if (file.isDirectory()) {
             ConfigurableListableBeanFactory beanFactory = applicationContext.getBeanFactory();
             String[] luaFiles = file.list();
             for (int i = 0; i < luaFiles.length; i++) {
                 String name = luaFiles[i];
                 DefaultRedisScript redisScript = new DefaultRedisScript();
-                redisScript.setLocation(new ClassPathResource(name));
+                redisScript.setLocation(new ClassPathResource(path+name));
                 beanFactory.registerSingleton(name.split("\\.")[0],redisScript);
             }
         }
