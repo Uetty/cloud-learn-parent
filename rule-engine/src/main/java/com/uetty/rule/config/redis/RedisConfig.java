@@ -1,19 +1,18 @@
 package com.uetty.rule.config.redis;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 
 @Data
 public class RedisConfig {
 
-    private int dbIndex;
+    private Integer dbIndex;
 
     private String host;
 
-    private int port;
+    private Integer port;
 
     private String password;
 
-    private int timeout;
+    private Integer timeout;
 
 }

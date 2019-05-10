@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: rule-engine
+  redis:
+    rule:
+      host: 118.25.54.197
+      port: 6379
+      password: 123456
+      dbIndex: 5
+
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://118.25.54.197:8761/eureka/
+  instance:
+    prefer-ip-address: true
+    lease-expiration-duration-in-seconds: 90    # 过期时间
+    lease-renewal-interval-in-seconds: 28    # 续约间隔
+
+server:
+  port: 18880

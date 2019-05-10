@@ -21,16 +21,16 @@ public class RuleRedis {
     }
 
     @Bean
-    public RuleRedisTemplate redisTemplate() {
-        return new RuleRedisTemplate(connectionFactory(ruleRedisConfig()));
+    public RuleRedisTemplate ruleRedisTemplate(RedisConfig ruleRedisConfig) {
+        return new RuleRedisTemplate(ruleConnectionFactory(ruleRedisConfig));
     }
 
-    public ReactiveRedisConnectionFactory connectionFactory(RedisConfig redisConfig) {
+    private ReactiveRedisConnectionFactory ruleConnectionFactory(RedisConfig ruleRedisConfig) {
         RedisStandaloneConfiguration configuration = new RedisStandaloneConfiguration();
-        configuration.setDatabase(redisConfig.getDbIndex());
-        configuration.setHostName(redisConfig.getHost());
-        configuration.setPort(redisConfig.getPort());
-        configuration.setPassword(redisConfig.getPassword());
+        configuration.setDatabase(ruleRedisConfig.getDbIndex());
+        configuration.setHostName(ruleRedisConfig.getHost());
+        configuration.setPort(ruleRedisConfig.getPort());
+        configuration.setPassword(ruleRedisConfig.getPassword());
         return new LettuceConnectionFactory(configuration);
     }
 
