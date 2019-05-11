@@ -1,6 +1,7 @@
 package com.uetty.rule.controller;
 
 import com.google.common.collect.Lists;
+import com.uetty.rule.config.redis.script.ScriptConfig;
 import com.uetty.rule.config.redis.template.RedisTemplateRule;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -14,17 +15,13 @@ public class RedisController {
 
     private final RedisTemplateRule redisTemplateRule;
 
-
-    private final DefaultRedisScript<Object> hget;
-
     @Autowired
-    public RedisController(RedisTemplateRule redisTemplateRule, DefaultRedisScript<Object> hget) {
+    public RedisController(RedisTemplateRule redisTemplateRule) {
         this.redisTemplateRule = redisTemplateRule;
-        this.hget = hget;
     }
 
     @RequestMapping("/script")
     public Mono script() {
-        return redisTemplateRule.execute(hget, Lists.newArrayList("aaa"), Lists.newArrayList("1")).collectList();
+        return redisTemplateRule.execute(ScriptConfig.getScript(ScriptConfig.ScriptType.HGET), Lists.newArrayList("aaa"), Lists.newArrayList("1")).collectList();
     }
 }

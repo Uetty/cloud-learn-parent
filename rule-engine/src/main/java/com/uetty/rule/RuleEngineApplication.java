@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
+import java.io.File;
 import java.util.Locale;
 
 @RestController
@@ -20,6 +21,10 @@ public class RuleEngineApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(RuleEngineApplication.class, args);
+//        String path = "D:/idea/work/cloud-learn-parent/rule-engine/target/classes/script/hget.lua";
+//        File file = new File(path);
+//        System.out.println(file.exists());
+
     }
 
     @GetMapping("/")
