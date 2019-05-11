@@ -1,10 +1,6 @@
 package com.uetty.rule.controller;
 
-import com.google.common.collect.Lists;
-import com.uetty.rule.config.redis.script.ScriptConfig;
-import com.uetty.rule.config.redis.template.RedisTemplateRule;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
+import com.uetty.rule.service.RedisService;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
@@ -13,15 +9,19 @@ import reactor.core.publisher.Mono;
 @RequestMapping("/redis")
 public class RedisController {
 
-    private final RedisTemplateRule redisTemplateRule;
+    private final RedisService redisService;
 
-    @Autowired
-    public RedisController(RedisTemplateRule redisTemplateRule) {
-        this.redisTemplateRule = redisTemplateRule;
+    public RedisController(RedisService redisService) {
+        this.redisService = redisService;
     }
 
     @RequestMapping("/script")
     public Mono script() {
-        return redisTemplateRule.execute(ScriptConfig.getScript(ScriptConfig.ScriptType.HGET), Lists.newArrayList("aaa"), Lists.newArrayList("1")).collectList();
+        return redisService.hget("user:detail", "1");
+    }
+
+    @RequestMapping("/getHashFromZset")
+    public Mono getHashFromZset() {
+        return redisService.getHashFromZset("user:sroce", "user:detail", "0", "-1");
     }
 }

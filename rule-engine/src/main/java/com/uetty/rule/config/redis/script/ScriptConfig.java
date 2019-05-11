@@ -46,7 +46,7 @@ public class ScriptConfig {
 
     public enum ScriptType {
 
-        HGET("hget");
+        HGET("hget"),GET_HASH_FROM_ZSET("getHashFromZset");
 
         private String key;
 
