@@ -17,11 +17,14 @@ public class RedisService {
         this.redisTemplateRule = redisTemplateRule;
     }
 
-    public Mono<?> hget(String key,Object value){
+    public Mono<?> hget(String key, Object value) {
         return redisTemplateRule.execute(ScriptConfig.getScript(ScriptConfig.ScriptType.HGET), Lists.newArrayList(key), Lists.newArrayList(value)).collectList();
     }
 
-    public Mono<?> getHashFromZset(String zsetKey,String hashKey,String start,String end){
-        return redisTemplateRule.execute(ScriptConfig.getScript(ScriptConfig.ScriptType.GET_HASH_FROM_ZSET), Lists.newArrayList(zsetKey,hashKey), Lists.newArrayList(start,end)).collectList();
+    public Mono<?> getHashFromZset(String zsetKey, String hashKey, String start, String end) {
+        return redisTemplateRule.execute(ScriptConfig.getScript(ScriptConfig.ScriptType.GET_HASH_FROM_ZSET),
+                Lists.newArrayList(zsetKey, hashKey),
+                Lists.newArrayList(start, end))
+                .collectList();
     }
 }
