@@ -13,10 +13,15 @@
 
     <dependencies>
         <dependency>
-        <artifactId>cloud-feign-api</artifactId>
-        <groupId>com.uetty</groupId>
-        <version>${project.version}</version>
-    </dependency>
+            <artifactId>cloud-feign-api</artifactId>
+            <groupId>com.uetty</groupId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <artifactId>common</artifactId>
+            <groupId>com.uetty</groupId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 
     <build>
