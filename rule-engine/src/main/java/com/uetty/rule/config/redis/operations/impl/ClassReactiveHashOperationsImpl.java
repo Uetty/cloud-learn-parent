@@ -154,7 +154,7 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
     /**
      * @return hashKey 序列化
      */
-    private ByteBuffer rawHashKey(HK key) {
+    private ByteBuffer rawHashKey(Object key) {
         return serializationContext.getHashKeySerializationPair().write(key);
     }
 
@@ -167,7 +167,7 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
         return (HK) serializationContext.getHashKeySerializationPair().read(value);
     }
 
-    private ByteBuffer rawHashValue(HV key) {
+    private ByteBuffer rawHashValue(Object key) {
         return serializationContext.getHashValueSerializationPair().write(key);
     }
 
@@ -176,13 +176,6 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
      */
     private ByteBuffer rawKey(H key) {
         return serializationContext.getKeySerializationPair().write(key);
-    }
-
-    /**
-     * @return key 序列化
-     */
-    private ByteBuffer rawString(Object key) {
-        return serializationString.getKeySerializationPair().write(key);
     }
 
     private HV readHashValue(ByteBuffer value) {
@@ -237,7 +230,7 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
                 map.put(hash + ":" + field.getName(), field.get(value));
             }
             return createMono(connection -> Flux.fromIterable(() -> map.entrySet().iterator())
-                    .collectMap(entry -> rawString(entry.getKey()), entry -> rawString(entry.getValue()))
+                    .collectMap(entry -> rawHashKey(entry.getKey()), entry -> rawHashValue(entry.getValue()))
                     .flatMap(serialized -> connection.hMSet(rawKey(key), serialized)));
         } catch (Exception e) {
             e.printStackTrace();

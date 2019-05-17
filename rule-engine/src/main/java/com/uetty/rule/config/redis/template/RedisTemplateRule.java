@@ -21,9 +21,37 @@ public class RedisTemplateRule<K, V> extends ReactiveRedisTemplate<K, V> {
         super(connectionFactory, redisSerializationContext(), exposeConnection);
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked","NullableProblems"})
     private static <K, V> RedisSerializationContext<K, V> redisSerializationContext() {
-        return (RedisSerializationContext<K, V>) RedisSerializationContext.fromSerializer(new JacksonRedisSerializer<>());
+        RedisSerializationContext<String, String> string = RedisSerializationContext.string();
+        RedisSerializationContext<K, V> clazz = (RedisSerializationContext<K, V>) RedisSerializationContext.fromSerializer(new JacksonRedisSerializer<>());
+        return new RedisSerializationContext<K, V>() {
+
+            @Override
+            public SerializationPair getKeySerializationPair() {
+                return string.getKeySerializationPair();
+            }
+
+            @Override
+            public SerializationPair getValueSerializationPair() {
+                return clazz.getValueSerializationPair();
+            }
+
+            @Override
+            public SerializationPair<String> getStringSerializationPair() {
+                return clazz.getStringSerializationPair();
+            }
+
+            @Override
+            public SerializationPair<V> getHashValueSerializationPair() {
+                return clazz.getHashValueSerializationPair();
+            }
+
+            @Override
+            public SerializationPair<K> getHashKeySerializationPair() {
+                return string.getHashKeySerializationPair();
+            }
+        };
     }
 
     @Override
