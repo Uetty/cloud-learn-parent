@@ -10,6 +10,6 @@ public interface ClassReactiveHashOperations<H, HK, HV> extends ReactiveHashOper
      * @param value 对象信息
      * @return 存储redis 主键:属性  值的形式
      */
-    Mono<Boolean> putClass(H key, HV value) throws IllegalAccessException;
+    Mono<Boolean> putClass(H key, HV value);
 
 }

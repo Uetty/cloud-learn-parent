@@ -20,7 +20,7 @@ public class RedisService {
     }
 
     public Mono<?> hget(String key, Object value) {
-        return redisTemplateRule.execute(ScriptConfig.getScript(ScriptConfig.ScriptType.HGET), Lists.newArrayList(key), Lists.newArrayList(value)).last();
+        return redisTemplateRule.opsForHash().putClass(key,value);
     }
 
     public Mono<?> getHashFromZset(String zsetKey, String hashKey, String start, String end) {

@@ -28,7 +28,7 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
     private final @NonNull ReactiveRedisTemplate<?, ?> template;
     private final @NonNull RedisSerializationContext<H, ?> serializationContext;
 
-    private final @NonNull RedisSerializationContext<Object,?> serializationString = RedisSerializationContext.java();
+    private final @NonNull RedisSerializationContext<Object, ?> serializationString = RedisSerializationContext.java();
 
     @Override
     public Mono<Long> remove(H key, Object... hashKeys) {
@@ -220,19 +220,20 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
             Class<?> clazz = value.getClass();
             Field[] declaredFields = clazz.getDeclaredFields();
             for (Field field : declaredFields) {
-                RedisPrimaryKey annotation = field.getAnnotation(RedisPrimaryKey.class);
-                if (annotation != null) {
+                if (field.getAnnotation(RedisPrimaryKey.class) != null) {
+                    field.setAccessible(true);
                     keyMap.put(field.getName(), field.get(value));
                 }
             }
             Assert.notEmpty(keyMap, "Redis 对象不能没有 @RedisPrimaryKey 主键 ");
             String hash = keyMap.entrySet()
                     .stream()
-                    .sorted()
+                    .sorted(Comparator.comparing(Map.Entry::getKey))
                     .map(Map.Entry::getValue)
                     .map(Object::toString)
                     .collect(Collectors.joining(":"));
             for (Field field : declaredFields) {
+                field.setAccessible(true);
                 map.put(hash + ":" + field.getName(), field.get(value));
             }
             return createMono(connection -> Flux.fromIterable(() -> map.entrySet().iterator())

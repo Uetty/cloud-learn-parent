@@ -1,6 +1,7 @@
 package com.uetty.rule.controller;
 
 import com.uetty.cloud.feign.api.api.engine.RedisLuaApi;
+import com.uetty.rule.entity.User;
 import com.uetty.rule.service.RedisService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,7 +20,10 @@ public class RedisController implements RedisLuaApi {
 
     @GetMapping("/script")
     public Mono script() {
-        return redisService.hget("user:detail", "1");
+        User user = new User();
+        user.setUserId(100);
+        user.setUserName("饺子");
+        return redisService.hget("user:detail", user);
     }
 
     @GetMapping("/getHashFromZset")
