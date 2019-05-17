@@ -1,5 +1,7 @@
 package com.uetty.rule.config.redis.operations.impl;
 
+import com.google.common.collect.Maps;
+import com.uetty.rule.config.redis.annotation.RedisPrimaryKey;
 import com.uetty.rule.config.redis.operations.ClassReactiveHashOperations;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -12,9 +14,11 @@ import org.springframework.util.Assert;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 
 @RequiredArgsConstructor
@@ -23,6 +27,8 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
 
     private final @NonNull ReactiveRedisTemplate<?, ?> template;
     private final @NonNull RedisSerializationContext<H, ?> serializationContext;
+
+    private final @NonNull RedisSerializationContext<Object,?> serializationString = RedisSerializationContext.java();
 
     @Override
     public Mono<Long> remove(H key, Object... hashKeys) {
@@ -172,6 +178,13 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
         return serializationContext.getKeySerializationPair().write(key);
     }
 
+    /**
+     * @return key 序列化
+     */
+    private ByteBuffer rawString(Object key) {
+        return serializationString.getKeySerializationPair().write(key);
+    }
+
     private HV readHashValue(ByteBuffer value) {
         return (HV) (value == null ? value : serializationContext.getHashValueSerializationPair().read(value));
     }
@@ -197,5 +210,37 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
     private <T> Flux<T> createFlux(Function<ReactiveHashCommands, Publisher<T>> function) {
         Assert.notNull(function, "Function must not be null!");
         return template.createFlux(connection -> function.apply(connection.hashCommands()));
+    }
+
+    @Override
+    public Mono<Boolean> putClass(H key, HV value) {
+        try {
+            Map<String, Object> map = Maps.newHashMap();
+            Map<String, Object> keyMap = Maps.newHashMap();
+            Class<?> clazz = value.getClass();
+            Field[] declaredFields = clazz.getDeclaredFields();
+            for (Field field : declaredFields) {
+                RedisPrimaryKey annotation = field.getAnnotation(RedisPrimaryKey.class);
+                if (annotation != null) {
+                    keyMap.put(field.getName(), field.get(value));
+                }
+            }
+            Assert.notEmpty(keyMap, "Redis 对象不能没有 @RedisPrimaryKey 主键 ");
+            String hash = keyMap.entrySet()
+                    .stream()
+                    .sorted()
+                    .map(Map.Entry::getValue)
+                    .map(Object::toString)
+                    .collect(Collectors.joining(":"));
+            for (Field field : declaredFields) {
+                map.put(hash + ":" + field.getName(), field.get(value));
+            }
+            return createMono(connection -> Flux.fromIterable(() -> map.entrySet().iterator())
+                    .collectMap(entry -> rawString(entry.getKey()), entry -> rawString(entry.getValue()))
+                    .flatMap(serialized -> connection.hMSet(rawKey(key), serialized)));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }
