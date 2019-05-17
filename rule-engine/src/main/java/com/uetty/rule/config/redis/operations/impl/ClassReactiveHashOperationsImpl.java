@@ -30,6 +30,8 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
 
     private final @NonNull RedisSerializationContext<Object, ?> serializationString = RedisSerializationContext.java();
 
+    private final static String CLASS = "@class";
+
     @Override
     public Mono<Long> remove(H key, Object... hashKeys) {
         Assert.notNull(key, "Key must not be null!");
@@ -209,26 +211,14 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
     public Mono<Boolean> putClass(H key, HV value) {
         try {
             Map<String, Object> map = Maps.newHashMap();
-            Map<String, Object> keyMap = Maps.newHashMap();
             Class<?> clazz = value.getClass();
             Field[] declaredFields = clazz.getDeclaredFields();
-            for (Field field : declaredFields) {
-                if (field.getAnnotation(RedisPrimaryKey.class) != null) {
-                    field.setAccessible(true);
-                    keyMap.put(field.getName(), field.get(value));
-                }
-            }
-            Assert.notEmpty(keyMap, "Redis 对象不能没有 @RedisPrimaryKey 主键 ");
-            String hash = keyMap.entrySet()
-                    .stream()
-                    .sorted(Comparator.comparing(Map.Entry::getKey))
-                    .map(Map.Entry::getValue)
-                    .map(Object::toString)
-                    .collect(Collectors.joining(":"));
+            String hash = getHashKeyPre(value);
             for (Field field : declaredFields) {
                 field.setAccessible(true);
                 map.put(hash + ":" + field.getName(), field.get(value));
             }
+            map.put(CLASS, clazz.getName());
             return createMono(connection -> Flux.fromIterable(() -> map.entrySet().iterator())
                     .collectMap(entry -> rawHashKey(entry.getKey()), entry -> rawHashValue(entry.getValue()))
                     .flatMap(serialized -> connection.hMSet(rawKey(key), serialized)));
@@ -236,5 +226,28 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
             e.printStackTrace();
         }
         return null;
+    }
+
+    /**
+     * 获取 hashkey 前缀
+     */
+    private String getHashKeyPre(HV value) throws IllegalAccessException {
+        Map<String, Object> keyMap = Maps.newHashMap();
+        Class<?> clazz = value.getClass();
+        Field[] declaredFields = clazz.getDeclaredFields();
+        for (Field field : declaredFields) {
+            if (field.getAnnotation(RedisPrimaryKey.class) != null) {
+                field.setAccessible(true);
+                keyMap.put(field.getName(), field.get(value));
+            }
+        }
+        Assert.notEmpty(keyMap, "Redis 对象不能没有 @RedisPrimaryKey 主键 ");
+        return keyMap.entrySet()
+                .stream()
+                .sorted(Comparator.comparing(Map.Entry::getKey))
+                .map(Map.Entry::getValue)
+                .map(Object::toString)
+                .collect(Collectors.joining(":"));
+
     }
 }
