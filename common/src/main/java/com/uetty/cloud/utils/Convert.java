@@ -111,7 +111,7 @@ public class Convert {
                 if (!(sourceField.get(sourceBean) == null)) {
                     targetField.set(targetBean, sourceField.get(sourceBean));
                 }
-            } catch (IllegalArgumentException | IllegalAccessException e) {
+            } catch (IllegalAccessException e) {
                 e.printStackTrace();
             }
         }
@@ -134,7 +134,7 @@ public class Convert {
                     map.put(varName, null);
                 }
                 field.setAccessible(accessFlag);// 恢复访问控制权限
-            } catch (IllegalArgumentException | IllegalAccessException e) {
+            } catch (IllegalAccessException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
             }

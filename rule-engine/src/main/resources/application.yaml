@@ -1,6 +1,8 @@
 spring:
   application:
     name: rule-engine
+  messages:
+    basename: message
   redis:
     luaPath: /script/
     rule:
