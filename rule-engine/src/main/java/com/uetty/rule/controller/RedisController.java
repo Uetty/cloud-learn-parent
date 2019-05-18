@@ -19,10 +19,10 @@ public class RedisController implements RedisLuaApi {
     }
 
     @GetMapping("/script")
-    public Mono script() {
+    public Mono script(Integer userId,String userName) {
         User user = new User();
-        user.setUserId(100);
-        user.setUserName("饺子");
+        user.setUserId(userId);
+        user.setUserName(userName);
         return redisService.hget("user:detail", user);
     }
 

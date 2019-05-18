@@ -1,5 +1,6 @@
 package com.uetty.rule.config.redis.operations.impl;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.uetty.rule.config.redis.annotation.RedisPrimaryKey;
 import com.uetty.rule.config.redis.operations.ClassReactiveHashOperations;
@@ -184,6 +185,10 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
         return (HV) (value == null ? value : serializationContext.getHashValueSerializationPair().read(value));
     }
 
+    private String readString(ByteBuffer value) {
+        return (String) (value == null ? value : serializationContext.getKeySerializationPair().read(value));
+    }
+
     private List<HV> deserializeHashValues(List<ByteBuffer> source) {
         List<HV> values = new ArrayList<>(source.size());
         for (ByteBuffer byteBuffer : source) {
@@ -225,6 +230,35 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
         } catch (Exception e) {
             e.printStackTrace();
         }
+        return null;
+    }
+
+    @Override
+    public Mono<HV> getClass(H key, Object hashKey) {
+        createMono(connection -> connection.hGet(rawKey(key), rawHashKey((HK) hashKey))
+                .map(this::readString))
+                .flatMap(className -> {
+                    Class<?> clazz = null;
+                    try {
+                        clazz = Class.forName(className);
+                    } catch (ClassNotFoundException e) {
+                        e.printStackTrace();
+                    }
+                    List<String> keys = Lists.newArrayList();
+                    Field[] declaredFields = clazz.getDeclaredFields();
+                    for (Field field : declaredFields) {
+                        if (field.getAnnotation(RedisPrimaryKey.class) != null) {
+                            field.setAccessible(true);
+                            keys.add(hashKey + ":" + field.getName());
+                        }
+                    }
+                    Assert.notNull(clazz, "没有类型");
+                    return createMono(connection -> Flux.fromIterable(keys)
+                            .map(this::rawHashKey)
+                            .collectList()
+                            .flatMap(hks -> connection.hMGet(rawKey(key), hks)
+                                    .map(this::deserializeHashValues)));
+                });
         return null;
     }
 

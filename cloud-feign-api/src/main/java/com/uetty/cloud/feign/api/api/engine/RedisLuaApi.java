@@ -15,7 +15,7 @@ import reactor.core.publisher.Mono;
 public interface RedisLuaApi extends HystrixClient {
 
     @GetMapping("/script")
-    Mono script();
+    Mono script(Integer userId,String userName);
 
     @GetMapping("/getHashFromZset")
     Mono getHashFromZset();
