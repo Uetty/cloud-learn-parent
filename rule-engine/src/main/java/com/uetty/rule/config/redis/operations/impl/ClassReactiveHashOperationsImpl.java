@@ -264,12 +264,16 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
                         })))
                 .flatMap(clazzNow -> {
                     List<String> keys = Lists.newArrayList();
+                    List<String> primaryKey = Lists.newArrayList();
                     Field[] declaredFields = clazzNow.getDeclaredFields();
                     for (Field field : declaredFields) {
+                        if (field.getAnnotation(RedisPrimaryKey.class) != null) {
+                            primaryKey.add(field.getName());
+                        }
                         field.setAccessible(true);
                         keys.add(hashKey + ":" + field.getName());
                     }
-                    Assert.notNull(clazzNow, "没有类型");
+                    Assert.isTrue(primaryKey.size() > 1, "该方法只适用于单个主键");
                     return createMono(connection -> Flux.fromIterable(keys)
                             .map(this::rawHashKey)
                             .collectList()
