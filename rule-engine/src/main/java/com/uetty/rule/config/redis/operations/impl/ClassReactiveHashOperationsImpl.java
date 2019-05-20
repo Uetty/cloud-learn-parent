@@ -185,14 +185,26 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
         return (HV) (value == null ? value : serializationContext.getHashValueSerializationPair().read(value));
     }
 
+    private Object readObject(ByteBuffer value) {
+        return (Object) (value == null ? value : serializationContext.getHashValueSerializationPair().read(value));
+    }
+
     private String readString(ByteBuffer value) {
-        return (String) (value == null ? value : serializationContext.getKeySerializationPair().read(value));
+        return (String) (value == null ? value : serializationContext.getHashValueSerializationPair().read(value));
     }
 
     private List<HV> deserializeHashValues(List<ByteBuffer> source) {
         List<HV> values = new ArrayList<>(source.size());
         for (ByteBuffer byteBuffer : source) {
             values.add(readHashValue(byteBuffer));
+        }
+        return values;
+    }
+
+    private List<Object> deserializeObjects(List<ByteBuffer> source) {
+        List<Object> values = new ArrayList<>(source.size());
+        for (ByteBuffer byteBuffer : source) {
+            values.add(readObject(byteBuffer));
         }
         return values;
     }
@@ -214,8 +226,8 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
 
     @Override
     public Mono<Boolean> putClass(H key, HV value) {
+        Map<String, Object> map = Maps.newHashMap();
         try {
-            Map<String, Object> map = Maps.newHashMap();
             Class<?> clazz = value.getClass();
             Field[] declaredFields = clazz.getDeclaredFields();
             String hash = getHashKeyPre(value);
@@ -224,42 +236,61 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
                 map.put(hash + ":" + field.getName(), field.get(value));
             }
             map.put(CLASS, clazz.getName());
-            return createMono(connection -> Flux.fromIterable(() -> map.entrySet().iterator())
-                    .collectMap(entry -> rawHashKey(entry.getKey()), entry -> rawHashValue(entry.getValue()))
-                    .flatMap(serialized -> connection.hMSet(rawKey(key), serialized)));
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return null;
+        return createMono(connection -> Flux.fromIterable(() -> map.entrySet().iterator())
+                .collectMap(entry -> rawHashKey(entry.getKey()), entry -> rawHashValue(entry.getValue()))
+                .flatMap(serialized -> connection.hMSet(rawKey(key), serialized)));
     }
 
     @Override
     public Mono<HV> getClass(H key, Object hashKey) {
-        createMono(connection -> connection.hGet(rawKey(key), rawHashKey((HK) hashKey))
-                .map(this::readString))
-                .flatMap(className -> {
-                    Class<?> clazz = null;
-                    try {
-                        clazz = Class.forName(className);
-                    } catch (ClassNotFoundException e) {
-                        e.printStackTrace();
-                    }
+        return this.getClass(key, hashKey, null);
+    }
+
+    @Override
+    public Mono<HV> getClass(H key, Object hashKey, Class<HV> clazz) {
+        return Mono.justOrEmpty(clazz)
+                .switchIfEmpty(createMono(connection -> connection.hGet(rawKey(key), rawHashKey(CLASS))
+                        .map(this::readString)
+                        .flatMap(className -> {
+                            try {
+                                return Mono.justOrEmpty((Class<HV>) Class.forName(className));
+                            } catch (ClassNotFoundException e) {
+                                e.printStackTrace();
+                            }
+                            return Mono.error(new RuntimeException("clazz 不存在"));
+                        })))
+                .flatMap(clazzNow -> {
                     List<String> keys = Lists.newArrayList();
-                    Field[] declaredFields = clazz.getDeclaredFields();
+                    Field[] declaredFields = clazzNow.getDeclaredFields();
                     for (Field field : declaredFields) {
-                        if (field.getAnnotation(RedisPrimaryKey.class) != null) {
-                            field.setAccessible(true);
-                            keys.add(hashKey + ":" + field.getName());
-                        }
+                        field.setAccessible(true);
+                        keys.add(hashKey + ":" + field.getName());
                     }
-                    Assert.notNull(clazz, "没有类型");
+                    Assert.notNull(clazzNow, "没有类型");
                     return createMono(connection -> Flux.fromIterable(keys)
                             .map(this::rawHashKey)
                             .collectList()
                             .flatMap(hks -> connection.hMGet(rawKey(key), hks)
-                                    .map(this::deserializeHashValues)));
+                                    .map(this::deserializeObjects)))
+                            .map(values -> {
+                                try {
+                                    HV hv = clazzNow.newInstance();
+                                    int i = 0;
+                                    for (Field field : declaredFields) {
+                                        field.setAccessible(true);
+                                        field.set(hv, values.get(i));
+                                        i++;
+                                    }
+                                    return hv;
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                                return null;
+                            });
                 });
-        return null;
     }
 
     /**

@@ -19,4 +19,12 @@ public interface ClassReactiveHashOperations<H, HK, HV> extends ReactiveHashOper
      */
     Mono<HV> getClass(H key, Object hashKey);
 
+    /**
+     * @param key     redis key
+     * @param hashKey 主键值
+     * @param clazz   返回值的对象类型
+     * @return 获取对象（适用于单个主键）
+     */
+    Mono<HV> getClass(H key, Object hashKey, Class<HV> clazz);
+
 }

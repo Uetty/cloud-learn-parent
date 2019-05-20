@@ -3,6 +3,7 @@ package com.uetty.rule.service;
 import com.google.common.collect.Lists;
 import com.uetty.rule.config.redis.script.ScriptConfig;
 import com.uetty.rule.config.redis.template.RedisTemplateRule;
+import com.uetty.rule.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
@@ -19,7 +20,7 @@ public class RedisService {
         this.redisTemplateRule = redisTemplateRule;
     }
 
-    public Mono<?> hget(String key, Object value) {
+    public Mono<?> classPut(String key, Object value) {
         return redisTemplateRule.opsForHash().putClass(key,value);
     }
 
@@ -28,5 +29,11 @@ public class RedisService {
                 Lists.newArrayList(zsetKey, hashKey),
                 Lists.newArrayList(start, end))
                 .last();
+    }
+
+    public Mono classGet(String key, Integer userId) {
+        User user = new User();
+        user.setUserId(userId);
+        return redisTemplateRule.opsForHash().getClass(key,userId);
     }
 }

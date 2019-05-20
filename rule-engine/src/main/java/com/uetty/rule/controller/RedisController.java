@@ -18,13 +18,18 @@ public class RedisController implements RedisLuaApi {
         this.redisService = redisService;
     }
 
-    @GetMapping("/script")
-    public Mono script(Integer userId,String userName) {
+    @GetMapping("/classPut")
+    public Mono classPut(Integer userId,String userName) {
         User user = new User();
         user.setUserId(userId);
         user.setUserName(userName);
-        return redisService.hget("user:detail", user);
+        return redisService.classPut("user:detail", user);
     }
+
+    @GetMapping("/classGet")
+    public Mono classGet(Integer userId){
+        return redisService.classGet("user:detail", userId);
+    };
 
     @GetMapping("/getHashFromZset")
     public Mono getHashFromZset() {
