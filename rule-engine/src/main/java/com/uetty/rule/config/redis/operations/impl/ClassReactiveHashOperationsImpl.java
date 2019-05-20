@@ -251,17 +251,7 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
 
     @Override
     public Mono<HV> getClass(H key, Object hashKey, Class<HV> clazz) {
-        return Mono.justOrEmpty(clazz)
-                .switchIfEmpty(createMono(connection -> connection.hGet(rawKey(key), rawHashKey(CLASS))
-                        .map(this::readString)
-                        .flatMap(className -> {
-                            try {
-                                return Mono.justOrEmpty((Class<HV>) Class.forName(className));
-                            } catch (ClassNotFoundException e) {
-                                e.printStackTrace();
-                            }
-                            return Mono.error(new RuntimeException("clazz 不存在"));
-                        })))
+        return this.getClassByName(key, clazz)
                 .flatMap(clazzNow -> {
                     List<String> keys = Lists.newArrayList();
                     List<String> primaryKey = Lists.newArrayList();
@@ -295,6 +285,25 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
                                 return null;
                             });
                 });
+    }
+
+    /**
+     * @param key   redis key
+     * @param clazz 类型
+     * @return 根据名称获取类型
+     */
+    private Mono<Class<HV>> getClassByName(H key, Class<HV> clazz) {
+        return Mono.justOrEmpty(clazz)
+                .switchIfEmpty(createMono(connection -> connection.hGet(rawKey(key), rawHashKey(CLASS))
+                        .map(this::readString)
+                        .flatMap(className -> {
+                            try {
+                                return Mono.justOrEmpty((Class<HV>) Class.forName(className));
+                            } catch (ClassNotFoundException e) {
+                                e.printStackTrace();
+                            }
+                            return Mono.error(new RuntimeException("clazz 不存在"));
+                        })));
     }
 
     /**
