@@ -263,7 +263,7 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
                         field.setAccessible(true);
                         keys.add(hashKey + ":" + field.getName());
                     }
-                    Assert.isTrue(primaryKey.size() > 1, "该方法只适用于单个主键");
+                    Assert.isTrue(primaryKey.size() == 1, "该方法只适用于单个主键");
                     return createMono(connection -> Flux.fromIterable(keys)
                             .map(this::rawHashKey)
                             .collectList()
