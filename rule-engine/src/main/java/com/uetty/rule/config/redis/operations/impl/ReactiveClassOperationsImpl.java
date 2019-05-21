@@ -3,7 +3,7 @@ package com.uetty.rule.config.redis.operations.impl;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.uetty.rule.config.redis.annotation.RedisPrimaryKey;
-import com.uetty.rule.config.redis.operations.ClassReactiveHashOperations;
+import com.uetty.rule.config.redis.operations.ReactiveClassOperations;
 import lombok.Data;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +11,6 @@ import org.apache.logging.log4j.util.Strings;
 import org.reactivestreams.Publisher;
 import org.springframework.data.redis.connection.ReactiveHashCommands;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
-import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.util.Assert;
 import reactor.core.publisher.Flux;
@@ -26,7 +25,7 @@ import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @SuppressWarnings({"NullableProblems", "unchecked"})
-public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactiveHashOperations<H, HK, HV> {
+public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOperations<H, HK, HV> {
 
     private final @NonNull ReactiveRedisTemplate<?, ?> template;
     private final @NonNull RedisSerializationContext<H, ?> serializationContext;
@@ -34,127 +33,6 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
     private final @NonNull RedisSerializationContext<Object, ?> serializationString = RedisSerializationContext.java();
 
     private final static String CLASS = "@class";
-
-    @Override
-    public Mono<Long> remove(H key, Object... hashKeys) {
-        Assert.notNull(key, "Key must not be null!");
-        Assert.notNull(hashKeys, "Hash keys must not be null!");
-        Assert.notEmpty(hashKeys, "Hash keys must not be empty!");
-        Assert.noNullElements(hashKeys, "Hash keys must not contain null elements!");
-        return createMono(connection -> Flux.fromArray(hashKeys)
-                .map(o -> (HK) o).map(this::rawHashKey)
-                .collectList()
-                .flatMap(hks -> connection.hDel(rawKey(key), hks)));
-    }
-
-    @Override
-    public Mono<Boolean> hasKey(H key, Object hashKey) {
-        Assert.notNull(key, "Key must not be null!");
-        Assert.notNull(hashKey, "Hash key must not be null!");
-        return createMono(connection -> connection.hExists(rawKey(key), rawHashKey((HK) hashKey)));
-    }
-
-    @Override
-    public Mono<HV> get(H key, Object hashKey) {
-        Assert.notNull(key, "Key must not be null!");
-        Assert.notNull(hashKey, "Hash key must not be null!");
-        return createMono(connection -> connection.hGet(rawKey(key), rawHashKey((HK) hashKey)).map(this::readHashValue));
-    }
-
-    @Override
-    public Mono<List<HV>> multiGet(H key, Collection<HK> hashKeys) {
-        Assert.notNull(key, "Key must not be null!");
-        Assert.notNull(hashKeys, "Hash keys must not be null!");
-        Assert.notEmpty(hashKeys, "Hash keys must not be empty!");
-        return createMono(connection -> Flux.fromIterable(hashKeys)
-                .map(this::rawHashKey)
-                .collectList()
-                .flatMap(hks -> connection.hMGet(rawKey(key), hks)).map(this::deserializeHashValues));
-    }
-
-    @Override
-    public Mono<Long> increment(H key, HK hashKey, long delta) {
-        Assert.notNull(key, "Key must not be null!");
-        Assert.notNull(hashKey, "Hash key must not be null!");
-        return template.createMono(connection -> connection
-                .numberCommands()
-                .hIncrBy(rawKey(key), rawHashKey(hashKey), delta));
-    }
-
-    @Override
-    public Mono<Double> increment(H key, HK hashKey, double delta) {
-        Assert.notNull(key, "Key must not be null!");
-        Assert.notNull(hashKey, "Hash key must not be null!");
-        return template.createMono(connection -> connection
-                .numberCommands()
-                .hIncrBy(rawKey(key), rawHashKey(hashKey), delta));
-    }
-
-    @Override
-    public Flux<HK> keys(H key) {
-        Assert.notNull(key, "Key must not be null!");
-        return createFlux(connection -> connection.hKeys(rawKey(key))
-                .map(this::readHashKey));
-    }
-
-    @Override
-    public Mono<Long> size(H key) {
-        Assert.notNull(key, "Key must not be null!");
-        return createMono(connection -> connection.hLen(rawKey(key)));
-    }
-
-    @Override
-    public Mono<Boolean> putAll(H key, Map<? extends HK, ? extends HV> map) {
-        Assert.notNull(key, "Key must not be null!");
-        Assert.notNull(map, "Map must not be null!");
-        return createMono(connection -> Flux.fromIterable(() -> map.entrySet().iterator())
-                .collectMap(entry -> rawHashKey(entry.getKey()), entry -> rawHashValue(entry.getValue()))
-                .flatMap(serialized -> connection.hMSet(rawKey(key), serialized)));
-    }
-
-    @Override
-    public Mono<Boolean> put(H key, HK hashKey, HV value) {
-        Assert.notNull(key, "Key must not be null!");
-        Assert.notNull(hashKey, "Hash key must not be null!");
-        Assert.notNull(value, "Hash value must not be null!");
-        return createMono(connection -> connection.hSet(rawKey(key), rawHashKey(hashKey), rawHashValue(value)));
-    }
-
-    @Override
-    public Mono<Boolean> putIfAbsent(H key, HK hashKey, HV value) {
-        Assert.notNull(key, "Key must not be null!");
-        Assert.notNull(hashKey, "Hash key must not be null!");
-        Assert.notNull(value, "Hash value must not be null!");
-        return createMono(connection -> connection.hSetNX(rawKey(key), rawHashKey(hashKey), rawHashValue(value)));
-    }
-
-    @Override
-    public Flux<HV> values(H key) {
-        Assert.notNull(key, "Key must not be null!");
-        return createFlux(connection -> connection.hVals(rawKey(key))
-                .map(this::readHashValue));
-    }
-
-    @Override
-    public Flux<Map.Entry<HK, HV>> entries(H key) {
-        Assert.notNull(key, "Key must not be null!");
-        return createFlux(connection -> connection.hGetAll(rawKey(key)) //
-                .map(this::deserializeHashEntry));
-    }
-
-    @Override
-    public Flux<Map.Entry<HK, HV>> scan(H key, ScanOptions options) {
-        Assert.notNull(key, "Key must not be null!");
-        Assert.notNull(key, "ScanOptions must not be null!");
-        return createFlux(connection -> connection.hScan(rawKey(key), options) //
-                .map(this::deserializeHashEntry));
-    }
-
-    @Override
-    public Mono<Boolean> delete(H key) {
-        Assert.notNull(key, "Key must not be null!");
-        return template.createMono(connection -> connection.keyCommands().del(rawKey(key))).map(l -> l != 0);
-    }
 
     /**
      * @return hashKey 序列化

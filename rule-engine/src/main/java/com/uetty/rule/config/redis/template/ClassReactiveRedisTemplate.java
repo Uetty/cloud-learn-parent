@@ -1,8 +1,8 @@
 package com.uetty.rule.config.redis.template;
 
 import com.uetty.rule.config.redis.JacksonRedisSerializer;
-import com.uetty.rule.config.redis.operations.ClassReactiveHashOperations;
-import com.uetty.rule.config.redis.operations.impl.ClassReactiveHashOperationsImpl;
+import com.uetty.rule.config.redis.operations.ReactiveClassOperations;
+import com.uetty.rule.config.redis.operations.impl.ReactiveClassOperationsImpl;
 import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
@@ -54,14 +54,12 @@ public class ClassReactiveRedisTemplate<K, V> extends ReactiveRedisTemplate<K, V
         };
     }
 
-    @Override
-    public <HK, HV> ClassReactiveHashOperations<K, HK, HV> opsForHash() {
-        return opsForHash(redisSerializationContext());
+    public <HK, HV> ReactiveClassOperations<K, HK, HV> opsForClass() {
+        return opsForClass(redisSerializationContext());
     }
 
-    @Override
-    public <K1, HK, HV> ClassReactiveHashOperations<K1, HK, HV> opsForHash(RedisSerializationContext<K1, ?> serializationContext) {
-        return new ClassReactiveHashOperationsImpl<>(this, serializationContext);
+    public <K1, HK, HV> ReactiveClassOperations<K1, HK, HV> opsForClass(RedisSerializationContext<K1, ?> serializationContext) {
+        return new ReactiveClassOperationsImpl<>(this, serializationContext);
     }
 }
 

@@ -21,7 +21,7 @@ public class RedisService {
     }
 
     public Mono<?> classPut(String key, Object value) {
-        return redisTemplateRule.opsForHash().putClass(key,value);
+        return redisTemplateRule.opsForClass().putClass(key,value);
     }
 
     public Mono<?> getHashFromZset(String zsetKey, String hashKey, String start, String end) {
@@ -34,6 +34,6 @@ public class RedisService {
     public Mono classGet(String key, Integer userId) {
         User user = new User();
         user.setUserId(userId);
-        return redisTemplateRule.opsForHash().getClass(key,user);
+        return redisTemplateRule.opsForClass().getClass(key,user);
     }
 }
