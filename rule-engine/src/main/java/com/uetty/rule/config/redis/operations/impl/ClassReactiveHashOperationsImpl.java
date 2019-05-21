@@ -7,6 +7,7 @@ import com.uetty.rule.config.redis.operations.ClassReactiveHashOperations;
 import lombok.Data;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import org.apache.logging.log4j.util.Strings;
 import org.reactivestreams.Publisher;
 import org.springframework.data.redis.connection.ReactiveHashCommands;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
@@ -260,10 +261,11 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
     private Mono<HV> getClassDetail(H key, Object hashKey, Class<HV> clazz) {
         return this.getClassByName(key, clazz)
                 .map(clazzNow -> {
-                    boolean ret =clazz!=null;
+                    boolean ret = clazz != null;
                     List<String> keys = Lists.newArrayList();
-                    ClassField<HV> classField = getClassField(clazzNow, field -> keys.add(findHashKey(field, hashKey,ret)));
-                    if (!ret){
+                    String preKey = "";
+                    ClassField<HV> classField = getClassField(clazzNow, field -> keys.add(findHashKey(field, hashKey, preKey, ret)));
+                    if (!ret) {
                         Assert.isTrue(classField.getPrimaryKey().size() == 1, "该方法只适用于单个主键");
                     }
                     classField.setKeys(keys);
@@ -279,20 +281,24 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
     }
 
     /**
-     * @param field 字段
+     * @param field   字段
      * @param hashKey 传入的值
-     * @param ret 是否为对象
+     * @param preKey  前缀
+     * @param ret     是否为对象
      * @return hashkey
      */
-    private String findHashKey(Field field, Object hashKey, boolean ret){
-        if (ret){
+    private String findHashKey(Field field, Object hashKey, String preKey, boolean ret) {
+        if (ret) {
             try {
-                return getHashKeyPre((HV)hashKey)+ ":" + field.getName();
+                if (Strings.isNotEmpty(preKey)) {
+                    preKey = getHashKeyPre((HV) hashKey);
+                }
+                return preKey + ":" + field.getName();
             } catch (IllegalAccessException e) {
-               e.printStackTrace();
+                e.printStackTrace();
             }
         }
-        return hashKey+ ":" + field.getName();
+        return hashKey + ":" + field.getName();
     }
 
     /**
