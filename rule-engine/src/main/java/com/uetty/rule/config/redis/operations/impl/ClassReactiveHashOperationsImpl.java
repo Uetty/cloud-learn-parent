@@ -247,15 +247,22 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
 
     @Override
     public Mono<HV> getClass(H key, Object hashKey) {
-        return this.getClass(key, hashKey, null);
+        Assert.notNull(hashKey, "hashKey must not be null!");
+        try {
+            HV hv = (HV) hashKey;
+            return this.getClassDetail(key, hashKey, (Class<HV>) hv.getClass());
+        } catch (ClassCastException e) {
+            //强转错误
+        }
+        return this.getClassDetail(key, hashKey, null);
     }
 
-    @Override
-    public Mono<HV> getClass(H key, Object hashKey, Class<HV> clazz) {
+    private Mono<HV> getClassDetail(H key, Object hashKey, Class<HV> clazz) {
         return this.getClassByName(key, clazz)
                 .map(clazzNow -> {
+                    boolean ret =clazz!=null;
                     List<String> keys = Lists.newArrayList();
-                    ClassField<HV> classField = getClassField(clazzNow, field -> keys.add(hashKey + ":" + field.getName()));
+                    ClassField<HV> classField = getClassField(clazzNow, field -> keys.add(findHashKey(field, hashKey,ret)));
                     Assert.isTrue(classField.getPrimaryKey().size() == 1, "该方法只适用于单个主键");
                     classField.setKeys(keys);
                     return classField;
@@ -266,13 +273,30 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
                         .flatMap(hks -> connection.hMGet(rawKey(key), hks)
                                 .map(this::deserializeObjects))
                         .map(values -> toMap(classField.getKeys(), values))
-                        .map(valueMap -> this.doFinally(classField,valueMap))));
+                        .map(valueMap -> this.doFinally(classField, valueMap))));
+    }
+
+    /**
+     * @param field 字段
+     * @param hashKey 传入的值
+     * @param ret 是否为对象
+     * @return hashkey
+     */
+    private String findHashKey(Field field, Object hashKey, boolean ret){
+        if (ret){
+            try {
+                return getHashKeyPre((HV)hashKey);
+            } catch (IllegalAccessException e) {
+               e.printStackTrace();
+            }
+        }
+        return hashKey+ ":" + field.getName();
     }
 
     /**
      * @return map 转成属性对象
      */
-    private HV doFinally(ClassField<HV> classField, Map<String, Object> valueMap){
+    private HV doFinally(ClassField<HV> classField, Map<String, Object> valueMap) {
         try {
             HV hv = classField.getClazz().getDeclaredConstructor().newInstance();
             for (Field field : classField.getDeclaredFields()) {
@@ -287,7 +311,7 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
     }
 
     /**
-     * @param keys redis Hash Key
+     * @param keys   redis Hash Key
      * @param values redis Hash Value
      * @return 组成 FieldName-value Map
      */
@@ -348,7 +372,6 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
     }
 
     private <R> ClassField<HV> getClassField(Class<HV> clazz, Function<Field, R> function) {
-
         List<String> primaryKey = Lists.newArrayList();
         Field[] declaredFields = clazz.getDeclaredFields();
         for (Field field : declaredFields) {
