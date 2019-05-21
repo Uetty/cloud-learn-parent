@@ -263,7 +263,9 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
                     boolean ret =clazz!=null;
                     List<String> keys = Lists.newArrayList();
                     ClassField<HV> classField = getClassField(clazzNow, field -> keys.add(findHashKey(field, hashKey,ret)));
-                    Assert.isTrue(classField.getPrimaryKey().size() == 1, "该方法只适用于单个主键");
+                    if (!ret){
+                        Assert.isTrue(classField.getPrimaryKey().size() == 1, "该方法只适用于单个主键");
+                    }
                     classField.setKeys(keys);
                     return classField;
                 })
