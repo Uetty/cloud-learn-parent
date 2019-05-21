@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.uetty.rule.config.redis.annotation.RedisPrimaryKey;
 import com.uetty.rule.config.redis.operations.ClassReactiveHashOperations;
+import lombok.Data;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.reactivestreams.Publisher;
@@ -252,39 +253,56 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
     @Override
     public Mono<HV> getClass(H key, Object hashKey, Class<HV> clazz) {
         return this.getClassByName(key, clazz)
-                .flatMap(clazzNow -> {
+                .map(clazzNow -> {
                     List<String> keys = Lists.newArrayList();
-                    List<String> primaryKey = Lists.newArrayList();
-                    Field[] declaredFields = clazzNow.getDeclaredFields();
-                    for (Field field : declaredFields) {
-                        if (field.getAnnotation(RedisPrimaryKey.class) != null) {
-                            primaryKey.add(field.getName());
-                        }
-                        field.setAccessible(true);
-                        keys.add(hashKey + ":" + field.getName());
-                    }
-                    Assert.isTrue(primaryKey.size() == 1, "该方法只适用于单个主键");
-                    return createMono(connection -> Flux.fromIterable(keys)
-                            .map(this::rawHashKey)
-                            .collectList()
-                            .flatMap(hks -> connection.hMGet(rawKey(key), hks)
-                                    .map(this::deserializeObjects)))
-                            .map(values -> {
-                                try {
-                                    HV hv = clazzNow.newInstance();
-                                    int i = 0;
-                                    for (Field field : declaredFields) {
-                                        field.setAccessible(true);
-                                        field.set(hv, values.get(i));
-                                        i++;
-                                    }
-                                    return hv;
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                }
-                                return null;
-                            });
-                });
+                    ClassField<HV> classField = getClassField(clazzNow, field -> keys.add(hashKey + ":" + field.getName()));
+                    Assert.isTrue(classField.getPrimaryKey().size() == 1, "该方法只适用于单个主键");
+                    classField.setKeys(keys);
+                    return classField;
+                })
+                .flatMap(classField -> createMono(connection -> Flux.fromIterable(classField.getKeys())
+                        .map(this::rawHashKey)
+                        .collectList()
+                        .flatMap(hks -> connection.hMGet(rawKey(key), hks)
+                                .map(this::deserializeObjects))
+                        .map(values -> toMap(classField.getKeys(), values))
+                        .map(valueMap -> this.doFinally(classField,valueMap))));
+    }
+
+    /**
+     * @return map 转成属性对象
+     */
+    private HV doFinally(ClassField<HV> classField, Map<String, Object> valueMap){
+        try {
+            HV hv = classField.getClazz().getDeclaredConstructor().newInstance();
+            for (Field field : classField.getDeclaredFields()) {
+                field.setAccessible(true);
+                field.set(hv, valueMap.get(field.getName()));
+            }
+            return hv;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    /**
+     * @param keys redis Hash Key
+     * @param values redis Hash Value
+     * @return 组成 FieldName-value Map
+     */
+    private Map<String, Object> toMap(List<String> keys, List<Object> values) {
+        Assert.isTrue(keys.size() == values.size(), "key和value数量不相等 ");
+        Map<String, Object> map = Maps.newHashMap();
+        for (int i = 0; i < keys.size(); i++) {
+            String key = keys.get(i);
+            Object value = values.get(i);
+            String[] split = key.split(":");
+            Assert.isTrue(split.length > 0, "分割属性出错 ");
+            String fieldName = split[split.length - 1];
+            map.put(fieldName, value);
+        }
+        return map;
     }
 
     /**
@@ -328,4 +346,41 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
                 .collect(Collectors.joining(":"));
 
     }
+
+    private <R> ClassField<HV> getClassField(Class<HV> clazz, Function<Field, R> function) {
+
+        List<String> primaryKey = Lists.newArrayList();
+        Field[] declaredFields = clazz.getDeclaredFields();
+        for (Field field : declaredFields) {
+            if (field.getAnnotation(RedisPrimaryKey.class) != null) {
+                primaryKey.add(field.getName());
+            }
+            field.setAccessible(true);
+            function.apply(field);
+        }
+        return new ClassField<>(primaryKey, declaredFields, clazz);
+    }
 }
+
+/**
+ * class存储对象
+ */
+@Data
+class ClassField<HV> {
+
+    private List<String> primaryKey;//主键列表
+
+    private Field[] declaredFields;//属性数组
+
+    private List<String> keys;//REDIS HASH KEY
+
+    private Class<HV> clazz;
+
+    public ClassField(List<String> primaryKey, Field[] declaredFields, Class<HV> clazz) {
+        this.primaryKey = primaryKey;
+        this.declaredFields = declaredFields;
+        this.clazz = clazz;
+    }
+}
+
+
