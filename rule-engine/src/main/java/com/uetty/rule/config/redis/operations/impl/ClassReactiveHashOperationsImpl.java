@@ -285,7 +285,7 @@ public class ClassReactiveHashOperationsImpl<H, HK, HV> implements ClassReactive
     private String findHashKey(Field field, Object hashKey, boolean ret){
         if (ret){
             try {
-                return getHashKeyPre((HV)hashKey);
+                return getHashKeyPre((HV)hashKey)+ ":" + field.getName();
             } catch (IllegalAccessException e) {
                e.printStackTrace();
             }

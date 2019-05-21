@@ -34,6 +34,6 @@ public class RedisService {
     public Mono classGet(String key, Integer userId) {
         User user = new User();
         user.setUserId(userId);
-        return redisTemplateRule.opsForHash().getClass(key,userId);
+        return redisTemplateRule.opsForHash().getClass(key,user);
     }
 }
