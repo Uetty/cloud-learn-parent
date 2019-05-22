@@ -1,5 +1,9 @@
 package com.uetty.rule.config.redis.operations.impl;
 
+import com.baomidou.mybatisplus.core.toolkit.ExceptionUtils;
+import com.baomidou.mybatisplus.core.toolkit.SerializationUtils;
+import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
+import com.baomidou.mybatisplus.core.toolkit.support.SerializedLambda;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.uetty.rule.config.redis.annotation.RedisPrimaryKey;
@@ -7,6 +11,7 @@ import com.uetty.rule.config.redis.operations.ReactiveClassOperations;
 import lombok.Data;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import org.apache.ibatis.reflection.ReflectionException;
 import org.apache.logging.log4j.util.Strings;
 import org.reactivestreams.Publisher;
 import org.springframework.data.redis.connection.ReactiveHashCommands;
@@ -16,6 +21,10 @@ import org.springframework.util.Assert;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectStreamClass;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -24,7 +33,7 @@ import java.util.stream.Collectors;
 
 
 @RequiredArgsConstructor
-@SuppressWarnings({"NullableProblems", "unchecked"})
+@SuppressWarnings("unchecked")
 public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOperations<H, HK, HV> {
 
     private final @NonNull ReactiveRedisTemplate<?, ?> template;
@@ -122,6 +131,11 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
         return createMono(connection -> Flux.fromIterable(() -> map.entrySet().iterator())
                 .collectMap(entry -> rawHashKey(entry.getKey()), entry -> rawHashValue(entry.getValue()))
                 .flatMap(serialized -> connection.hMSet(rawKey(key), serialized)));
+    }
+
+    @Override
+    public Mono<HV> getClass(H key, Object hashKey, SFunction<HV, ?>... columns) {
+        return null;
     }
 
     @Override
@@ -268,6 +282,45 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
             function.apply(field);
         }
         return new ClassField<>(primaryKey, declaredFields, clazz);
+    }
+
+    private String methodToProperty(String name) {
+        if (name.startsWith("is")) {
+            name = name.substring(2);
+        } else {
+            if (!name.startsWith("get") && !name.startsWith("set")) {
+                throw new ReflectionException("Error parsing property name '" + name + "'.  Didn't start with 'is', 'get' or 'set'.");
+            }
+            name = name.substring(3);
+        }
+        if (name.length() == 1 || name.length() > 1 && !Character.isUpperCase(name.charAt(1))) {
+            name = name.substring(0, 1).toLowerCase(Locale.ENGLISH) + name.substring(1);
+        }
+
+        return name;
+    }
+
+    /**
+     * 通过反序列化转换 lambda 表达式，该方法只能序列化 lambda 表达式，不能序列化接口实现或者正常非 lambda 写法的对象
+     *
+     * @param lambda lambda对象
+     * @return 返回解析后的 SerializedLambda
+     */
+    public SerializedLambda resolve(SFunction<?, ?> lambda) {
+        if (!lambda.getClass().isSynthetic()) {
+            throw ExceptionUtils.mpe("该方法仅能传入 lambda 表达式产生的合成类");
+        }
+        try (ObjectInputStream objIn = new ObjectInputStream(new ByteArrayInputStream(SerializationUtils.serialize(lambda))) {
+            @Override
+            protected Class<?> resolveClass(ObjectStreamClass objectStreamClass) throws IOException, ClassNotFoundException {
+                Class<?> clazz = super.resolveClass(objectStreamClass);
+                return clazz == java.lang.invoke.SerializedLambda.class ? SerializedLambda.class : clazz;
+            }
+        }) {
+            return (SerializedLambda) objIn.readObject();
+        } catch (ClassNotFoundException | IOException e) {
+            throw ExceptionUtils.mpe("This is impossible to happen", e);
+        }
     }
 }
 
