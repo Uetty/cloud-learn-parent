@@ -171,12 +171,12 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
                 if (Strings.isNotEmpty(preKey)) {
                     preKey = getHashKeyPre((HV) hashKey);
                 }
-                return preKey + ":" + field.getName();
+                return new StringJoiner(preKey).add(":").add(field.getName()).toString();
             } catch (IllegalAccessException e) {
                 e.printStackTrace();
             }
         }
-        return hashKey + ":" + field.getName();
+        return new StringJoiner(Objects.toString(hashKey)).add(":").add(field.getName()).toString();
     }
 
     /**
