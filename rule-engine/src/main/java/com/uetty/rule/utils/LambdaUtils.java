@@ -21,7 +21,6 @@ import java.lang.ref.WeakReference;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
 
 import static java.util.Locale.ENGLISH;
 
@@ -46,7 +45,7 @@ public final class LambdaUtils {
      * @param <T>  类型，被调用的 Function 对象的目标类型
      * @return 返回解析后的结果
      */
-    public static <T> SerializedLambda resolve(Function<T, ?> func) {
+    public static <T> SerializedLambda resolve(SerializableFunction<T, ?> func) {
         Class<?> clazz = func.getClass();
         return Optional.ofNullable(FUNC_CACHE.get(clazz))
                 .map(WeakReference::get)

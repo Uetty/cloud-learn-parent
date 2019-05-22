@@ -1,16 +1,15 @@
 package com.uetty.rule.config.redis.operations.impl;
 
-import com.baomidou.mybatisplus.core.toolkit.LambdaUtils;
-import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
-import com.baomidou.mybatisplus.core.toolkit.support.SerializedLambda;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.uetty.rule.config.redis.annotation.RedisPrimaryKey;
 import com.uetty.rule.config.redis.operations.ReactiveClassOperations;
+import com.uetty.rule.utils.LambdaUtils;
+import com.uetty.rule.utils.SerializableFunction;
+import com.uetty.rule.utils.SerializedLambda;
 import lombok.Data;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import org.apache.ibatis.reflection.ReflectionException;
 import org.apache.logging.log4j.util.Strings;
 import org.reactivestreams.Publisher;
 import org.springframework.data.redis.connection.ReactiveHashCommands;
@@ -37,6 +36,8 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
     private final @NonNull RedisSerializationContext<Object, ?> serializationString = RedisSerializationContext.java();
 
     private final static String CLASS = "@class";
+
+    private static String DIVIDE =":";
 
     /**
      * @return hashKey 序列化
@@ -129,30 +130,25 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
     }
 
     @Override
-    public Mono<HV> getClass(H key, Object hashKey, SFunction<HV, ?>... columns) {
-        List<String> fields = columnsToString(columns);
-        return null;
-    }
-
-    @Override
-    public Mono<HV> getClass(H key, Object hashKey) {
+    public Mono<HV> getClass(H key, Object hashKey, SerializableFunction<HV, ?>... columns) {
         Assert.notNull(hashKey, "hashKey must not be null!");
+        List<String> fields = columnsToString(columns);
         try {
             HV hv = (HV) hashKey;
-            return this.getClassDetail(key, hashKey, (Class<HV>) hv.getClass());
+            return this.getClassDetail(key, hashKey, (Class<HV>) hv.getClass(),fields);
         } catch (ClassCastException e) {
             //强转错误
         }
-        return this.getClassDetail(key, hashKey, null);
+        return this.getClassDetail(key, hashKey, null,fields);
     }
 
-    private Mono<HV> getClassDetail(H key, Object hashKey, Class<HV> clazz) {
+    private Mono<HV> getClassDetail(H key, Object hashKey, Class<HV> clazz,List<String> fields) {
         return this.getClassByName(key, clazz)
                 .map(clazzNow -> {
                     boolean ret = clazz != null;
                     List<String> keys = Lists.newArrayList();
                     String preKey = "";
-                    ClassField<HV> classField = getClassField(clazzNow, field -> keys.add(findHashKey(field, hashKey, preKey, ret)));
+                    ClassField<HV> classField = getClassField(clazzNow,fields, field -> keys.add(findHashKey(field, hashKey, preKey, ret)));
                     if (!ret) {
                         Assert.isTrue(classField.getPrimaryKey().size() == 1, "该方法只适用于单个主键");
                     }
@@ -178,15 +174,15 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
     private String findHashKey(Field field, Object hashKey, String preKey, boolean ret) {
         if (ret) {
             try {
-                if (Strings.isNotEmpty(preKey)) {
+                if (!Strings.isNotEmpty(preKey)) {
                     preKey = getHashKeyPre((HV) hashKey);
                 }
-                return new StringJoiner(preKey).add(":").add(field.getName()).toString();
+                return new StringJoiner(DIVIDE).add(preKey).add(field.getName()).toString();
             } catch (IllegalAccessException e) {
                 e.printStackTrace();
             }
         }
-        return new StringJoiner(Objects.toString(hashKey)).add(":").add(field.getName()).toString();
+        return new StringJoiner(DIVIDE).add(Objects.toString(hashKey)).add(field.getName()).toString();
     }
 
     /**
@@ -254,7 +250,9 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
         for (Field field : declaredFields) {
             if (field.getAnnotation(RedisPrimaryKey.class) != null) {
                 field.setAccessible(true);
-                keyMap.put(field.getName(), field.get(value));
+                Object fieldValue = field.get(value);
+                Assert.notNull(fieldValue,"主键值不能为空");
+                keyMap.put(field.getName(), fieldValue);
             }
         }
         Assert.notEmpty(keyMap, "Redis 对象不能没有 @RedisPrimaryKey 主键 ");
@@ -267,12 +265,15 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
 
     }
 
-    private <R> ClassField<HV> getClassField(Class<HV> clazz, Function<Field, R> function) {
+    private <R> ClassField<HV> getClassField(Class<HV> clazz,List<String> fields, Function<Field, R> function) {
         List<String> primaryKey = Lists.newArrayList();
         Field[] declaredFields = clazz.getDeclaredFields();
         for (Field field : declaredFields) {
             if (field.getAnnotation(RedisPrimaryKey.class) != null) {
                 primaryKey.add(field.getName());
+            }
+            if (fields.size()>0&&!fields.contains(field.getName())){
+                continue;
             }
             field.setAccessible(true);
             function.apply(field);
@@ -285,7 +286,7 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
             name = name.substring(2);
         } else {
             if (!name.startsWith("get") && !name.startsWith("set")) {
-                throw new ReflectionException("Error parsing property name '" + name + "'.  Didn't start with 'is', 'get' or 'set'.");
+                throw new RuntimeException("Error parsing property name '" + name + "'.  Didn't start with 'is', 'get' or 'set'.");
             }
             name = name.substring(3);
         }
@@ -296,14 +297,17 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
         return name;
     }
 
-    private List<String> columnsToString(SFunction<HV, ?>... columns) {
+    private List<String> columnsToString(SerializableFunction<HV, ?>... columns) {
+        if (columns == null) {
+            return Lists.newArrayList();
+        }
         return Arrays.stream(columns).map(i -> getColumn(LambdaUtils.resolve(i))).collect(Collectors.toList());
     }
 
     /**
      * 获取 SerializedLambda 对应的列信息，从 lambda 表达式中推测实体类
      */
-    private String getColumn(SerializedLambda lambda){
+    private String getColumn(SerializedLambda lambda) {
         return methodToProperty(lambda.getImplMethodName());
 
 

@@ -1,6 +1,6 @@
 package com.uetty.rule.config.redis.operations;
 
-import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
+import com.uetty.rule.utils.SerializableFunction;
 import reactor.core.publisher.Mono;
 
 public interface ReactiveClassOperations<H, HK, HV> {
@@ -12,18 +12,12 @@ public interface ReactiveClassOperations<H, HK, HV> {
      */
     Mono<Boolean> putClass(H key, HV value);
 
-    /**
-     * @param key     redis key
-     * @param hashKey 主键值
-     * @return 获取对象（适用于单个主键）
-     */
-    Mono<HV> getClass(H key, Object hashKey);
 
     /**
      * @param key     redis key
      * @param hashKey 主键值
      * @return 获取对象（适用于单个主键）
      */
-    Mono<HV> getClass(H key, Object hashKey, SFunction<HV, ?>... columns);
+    Mono<HV> getClass(H key, Object hashKey, SerializableFunction<HV, ?>... columns);
 
 }

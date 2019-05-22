@@ -16,10 +16,7 @@
 package com.uetty.rule.utils;
 
 
-import com.uetty.cloud.utils.JacksonUtil;
-
 import java.io.*;
-import java.util.function.Function;
 import java.util.regex.Pattern;
 
 /**
@@ -52,11 +49,11 @@ public class SerializedLambda implements Serializable {
      * @param lambda lambda对象
      * @return 返回解析后的 SerializedLambda
      */
-    public static SerializedLambda resolve(Function<?, ?> lambda) {
+    public static SerializedLambda resolve(SerializableFunction<?, ?> lambda) {
         if (!lambda.getClass().isSynthetic()) {
             throw new RuntimeException("该方法仅能传入 lambda 表达式产生的合成类");
         }
-        try (ObjectInputStream objIn = new ObjectInputStream(new ByteArrayInputStream(JacksonUtil.jackson.obj2Byte(lambda))) {
+        try (ObjectInputStream objIn = new ObjectInputStream(new ByteArrayInputStream(serialize(lambda))) {
             @Override
             protected Class<?> resolveClass(ObjectStreamClass objectStreamClass) throws IOException, ClassNotFoundException {
                 Class<?> clazz = super.resolveClass(objectStreamClass);
@@ -67,6 +64,26 @@ public class SerializedLambda implements Serializable {
         } catch (ClassNotFoundException | IOException e) {
             throw new RuntimeException("This is impossible to happen", e);
         }
+    }
+
+    /**
+     * Serialize the given object to a byte array.
+     * @param object the object to serialize
+     * @return an array of bytes representing the object in a portable fashion
+     */
+    public static byte[] serialize(Object object) {
+        if (object == null) {
+            return null;
+        }
+        ByteArrayOutputStream baos = new ByteArrayOutputStream(1024);
+        try {
+            ObjectOutputStream oos = new ObjectOutputStream(baos);
+            oos.writeObject(object);
+            oos.flush();
+        } catch (IOException ex) {
+            throw new IllegalArgumentException("Failed to serialize object of type: " + object.getClass(), ex);
+        }
+        return baos.toByteArray();
     }
 
     /**
