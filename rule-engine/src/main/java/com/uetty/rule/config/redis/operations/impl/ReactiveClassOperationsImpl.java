@@ -1,7 +1,6 @@
 package com.uetty.rule.config.redis.operations.impl;
 
-import com.baomidou.mybatisplus.core.toolkit.ExceptionUtils;
-import com.baomidou.mybatisplus.core.toolkit.SerializationUtils;
+import com.baomidou.mybatisplus.core.toolkit.LambdaUtils;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.core.toolkit.support.SerializedLambda;
 import com.google.common.collect.Lists;
@@ -21,10 +20,6 @@ import org.springframework.util.Assert;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectStreamClass;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -135,6 +130,7 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
 
     @Override
     public Mono<HV> getClass(H key, Object hashKey, SFunction<HV, ?>... columns) {
+        List<String> fields = columnsToString(columns);
         return null;
     }
 
@@ -300,27 +296,17 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
         return name;
     }
 
+    private List<String> columnsToString(SFunction<HV, ?>... columns) {
+        return Arrays.stream(columns).map(i -> getColumn(LambdaUtils.resolve(i))).collect(Collectors.toList());
+    }
+
     /**
-     * 通过反序列化转换 lambda 表达式，该方法只能序列化 lambda 表达式，不能序列化接口实现或者正常非 lambda 写法的对象
-     *
-     * @param lambda lambda对象
-     * @return 返回解析后的 SerializedLambda
+     * 获取 SerializedLambda 对应的列信息，从 lambda 表达式中推测实体类
      */
-    public SerializedLambda resolve(SFunction<?, ?> lambda) {
-        if (!lambda.getClass().isSynthetic()) {
-            throw ExceptionUtils.mpe("该方法仅能传入 lambda 表达式产生的合成类");
-        }
-        try (ObjectInputStream objIn = new ObjectInputStream(new ByteArrayInputStream(SerializationUtils.serialize(lambda))) {
-            @Override
-            protected Class<?> resolveClass(ObjectStreamClass objectStreamClass) throws IOException, ClassNotFoundException {
-                Class<?> clazz = super.resolveClass(objectStreamClass);
-                return clazz == java.lang.invoke.SerializedLambda.class ? SerializedLambda.class : clazz;
-            }
-        }) {
-            return (SerializedLambda) objIn.readObject();
-        } catch (ClassNotFoundException | IOException e) {
-            throw ExceptionUtils.mpe("This is impossible to happen", e);
-        }
+    private String getColumn(SerializedLambda lambda){
+        return methodToProperty(lambda.getImplMethodName());
+
+
     }
 }
 

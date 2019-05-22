@@ -1,6 +1,7 @@
 package com.uetty.rule.service;
 
 import com.google.common.collect.Lists;
+import com.uetty.rule.config.redis.operations.ReactiveClassOperations;
 import com.uetty.rule.config.redis.script.ScriptConfig;
 import com.uetty.rule.config.redis.template.RedisTemplateRule;
 import com.uetty.rule.entity.User;
@@ -34,6 +35,7 @@ public class RedisService {
     public Mono classGet(String key, Integer userId) {
         User user = new User();
         user.setUserId(userId);
-        return redisTemplateRule.opsForClass().getClass(key,user);
+        ReactiveClassOperations<String, String, User> classOperations = redisTemplateRule.opsForClass();
+        return classOperations.getClass(key,user,User::getUserId);
     }
 }
