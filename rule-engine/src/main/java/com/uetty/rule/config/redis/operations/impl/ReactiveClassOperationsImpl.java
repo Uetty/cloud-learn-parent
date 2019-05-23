@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 
 
 @RequiredArgsConstructor
-@SuppressWarnings("unchecked")
+@SuppressWarnings({"unchecked","varargs"})
 public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOperations<H, HK, HV> {
 
     private final @NonNull ReactiveRedisTemplate<?, ?> template;

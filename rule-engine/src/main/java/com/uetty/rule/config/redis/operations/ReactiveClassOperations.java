@@ -18,6 +18,7 @@ public interface ReactiveClassOperations<H, HK, HV> {
      * @param hashKey 主键值
      * @return 获取对象（适用于单个主键）
      */
+    @SuppressWarnings({"unchecked","varargs"})
     Mono<HV> getClass(H key, Object hashKey, SerializableFunction<HV, ?>... columns);
 
 }
