@@ -110,12 +110,12 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
     }
 
     @Override
-    public Mono<Boolean> putClass(H key, HV value) {
+    public Mono<Boolean> putClass(H key, HV... value) {
         Map<String, Object> map = Maps.newHashMap();
         try {
             Class<?> clazz = value.getClass();
             Field[] declaredFields = clazz.getDeclaredFields();
-            String hash = getHashKeyPre(value);
+            String hash = getHashKeyPre(value[0]);
             for (Field field : declaredFields) {
                 field.setAccessible(true);
                 map.put(hash + ":" + field.getName(), field.get(value));

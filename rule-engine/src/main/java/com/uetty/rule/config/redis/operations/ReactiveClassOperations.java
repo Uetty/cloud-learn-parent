@@ -3,6 +3,7 @@ package com.uetty.rule.config.redis.operations;
 import com.uetty.rule.utils.SerializableFunction;
 import reactor.core.publisher.Mono;
 
+@SuppressWarnings({"unchecked","varargs"})
 public interface ReactiveClassOperations<H, HK, HV> {
 
     /**
@@ -10,7 +11,7 @@ public interface ReactiveClassOperations<H, HK, HV> {
      * @param value 对象信息
      * @return 存储redis 主键:属性  值的形式
      */
-    Mono<Boolean> putClass(H key, HV value);
+    Mono<Boolean> putClass(H key, HV... value);
 
 
     /**
@@ -18,7 +19,6 @@ public interface ReactiveClassOperations<H, HK, HV> {
      * @param hashKey 主键值
      * @return 获取对象（适用于单个主键）
      */
-    @SuppressWarnings({"unchecked","varargs"})
     Mono<HV> getClass(H key, Object hashKey, SerializableFunction<HV, ?>... columns);
 
 }
