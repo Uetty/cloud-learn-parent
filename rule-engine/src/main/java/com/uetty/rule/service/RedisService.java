@@ -22,7 +22,7 @@ public class RedisService {
     }
 
     public Mono<?> classPut(String key, Object value) {
-        return redisTemplateRule.opsForClass().putClass(key,value);
+        return redisTemplateRule.opsForClass().putClass(key,Lists.newArrayList(value,value));
     }
 
     public Mono<?> getHashFromZset(String zsetKey, String hashKey, String start, String end) {

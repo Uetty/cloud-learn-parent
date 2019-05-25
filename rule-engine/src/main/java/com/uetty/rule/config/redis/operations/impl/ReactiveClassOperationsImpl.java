@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 
 
 @RequiredArgsConstructor
-@SuppressWarnings({"unchecked","varargs"})
+@SuppressWarnings({"unchecked", "varargs"})
 public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOperations<H, HK, HV> {
 
     private final @NonNull ReactiveRedisTemplate<?, ?> template;
@@ -37,7 +37,7 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
 
     private final static String CLASS = "@class";
 
-    private static String DIVIDE =":";
+    private static String DIVIDE = ":";
 
     /**
      * @return hashKey 序列化
@@ -110,17 +110,28 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
     }
 
     @Override
-    public Mono<Boolean> putClass(H key, HV... value) {
+    public Mono<Boolean> putClass(H key, HV... values) {
+        return putClass(key,Arrays.asList(values));
+    }
+
+    @Override
+    public Mono<Boolean> putClass(H key, Collection<HV> values) {
         Map<String, Object> map = Maps.newHashMap();
         try {
-            Class<?> clazz = value.getClass();
-            Field[] declaredFields = clazz.getDeclaredFields();
-            String hash = getHashKeyPre(value[0]);
-            for (Field field : declaredFields) {
-                field.setAccessible(true);
-                map.put(hash + ":" + field.getName(), field.get(value));
+            Class<?> clazz = null;
+            Field[] declaredFields = null;
+            for (HV hv : values) {
+                if (clazz == null) {
+                    clazz = hv.getClass();
+                    declaredFields = clazz.getDeclaredFields();
+                }
+                String hash = getHashKeyPre(hv);
+                for (Field field : declaredFields) {
+                    field.setAccessible(true);
+                    map.put(hash + ":" + field.getName(), field.get(hv));
+                }
+                map.put(CLASS, clazz.getName());
             }
-            map.put(CLASS, clazz.getName());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -129,26 +140,27 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
                 .flatMap(serialized -> connection.hMSet(rawKey(key), serialized)));
     }
 
+
     @Override
     public Mono<HV> getClass(H key, Object hashKey, SerializableFunction<HV, ?>... columns) {
         Assert.notNull(hashKey, "hashKey must not be null!");
         List<String> fields = columnsToString(columns);
         try {
             HV hv = (HV) hashKey;
-            return this.getClassDetail(key, hashKey, (Class<HV>) hv.getClass(),fields);
+            return this.getClassDetail(key, hashKey, (Class<HV>) hv.getClass(), fields);
         } catch (ClassCastException e) {
             //强转错误
         }
-        return this.getClassDetail(key, hashKey, null,fields);
+        return this.getClassDetail(key, hashKey, null, fields);
     }
 
-    private Mono<HV> getClassDetail(H key, Object hashKey, Class<HV> clazz,List<String> fields) {
+    private Mono<HV> getClassDetail(H key, Object hashKey, Class<HV> clazz, List<String> fields) {
         return this.getClassByName(key, clazz)
                 .map(clazzNow -> {
                     boolean ret = clazz != null;
                     List<String> keys = Lists.newArrayList();
                     String preKey = "";
-                    ClassField<HV> classField = getClassField(clazzNow,fields, field -> keys.add(findHashKey(field, hashKey, preKey, ret)));
+                    ClassField<HV> classField = getClassField(clazzNow, fields, field -> keys.add(findHashKey(field, hashKey, preKey, ret)));
                     if (!ret) {
                         Assert.isTrue(classField.getPrimaryKey().size() == 1, "该方法只适用于单个主键");
                     }
@@ -251,7 +263,7 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
             if (field.getAnnotation(RedisPrimaryKey.class) != null) {
                 field.setAccessible(true);
                 Object fieldValue = field.get(value);
-                Assert.notNull(fieldValue,"主键值不能为空");
+                Assert.notNull(fieldValue, "主键值不能为空");
                 keyMap.put(field.getName(), fieldValue);
             }
         }
@@ -265,14 +277,14 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
 
     }
 
-    private <R> ClassField<HV> getClassField(Class<HV> clazz,List<String> fields, Function<Field, R> function) {
+    private <R> ClassField<HV> getClassField(Class<HV> clazz, List<String> fields, Function<Field, R> function) {
         List<String> primaryKey = Lists.newArrayList();
         Field[] declaredFields = clazz.getDeclaredFields();
         for (Field field : declaredFields) {
             if (field.getAnnotation(RedisPrimaryKey.class) != null) {
                 primaryKey.add(field.getName());
             }
-            if (fields.size()>0&&!fields.contains(field.getName())){
+            if (fields.size() > 0 && !fields.contains(field.getName())) {
                 continue;
             }
             field.setAccessible(true);
