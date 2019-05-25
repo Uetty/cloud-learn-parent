@@ -11,7 +11,6 @@ import com.uetty.rule.utils.SerializedLambda;
 import lombok.Data;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import org.apache.logging.log4j.util.Strings;
 import org.reactivestreams.Publisher;
 import org.springframework.data.redis.connection.ReactiveHashCommands;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
@@ -141,27 +140,35 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
                 .flatMap(serialized -> connection.hMSet(rawKey(key), serialized)));
     }
 
+    @Override
+    public Mono<List<HV>> getClass(H key, FunctionCollection columns, Collection<HV> hashKey) {
+        Assert.notNull(key, "key must not be null!");
+        Assert.isTrue(hashKey != null & hashKey.size() > 0, "hashKey must not be null!");
+        List<String> fields = columnsToString(columns.getFunctions());
+        return this.getClassDetail(key, hashKey, (Class<HV>) hashKey.toArray()[0].getClass(), fields);
+    }
 
     @Override
-    public Mono<HV> getClass(H key, Object hashKey, FunctionCollection columns) {
+    public Mono<HV> getClass(H key, FunctionCollection columns, Object hashKey) {
+        Assert.notNull(key, "key must not be null!");
         Assert.notNull(hashKey, "hashKey must not be null!");
         List<String> fields = columnsToString(columns.getFunctions());
         try {
             HV hv = (HV) hashKey;
-            return this.getClassDetail(key, hashKey, (Class<HV>) hv.getClass(), fields);
+            return this.getClassDetail(key, Lists.newArrayList(hashKey), (Class<HV>) hv.getClass(), fields).map(list->list.stream().findFirst().get());
         } catch (ClassCastException e) {
             //强转错误
         }
-        return this.getClassDetail(key, hashKey, null, fields);
+        return this.getClassDetail(key, Lists.newArrayList(hashKey), null, fields).map(list->list.stream().findFirst().get());
     }
 
-    private Mono<HV> getClassDetail(H key, Object hashKey, Class<HV> clazz, List<String> fields) {
+    private Mono<List<HV>> getClassDetail(H key, Collection hashKey, Class<HV> clazz, List<String> fields) {
         return this.getClassByName(key, clazz)
                 .map(clazzNow -> {
                     boolean ret = clazz != null;
                     List<String> keys = Lists.newArrayList();
-                    String preKey = "";
-                    ClassField<HV> classField = getClassField(clazzNow, fields, field -> keys.add(findHashKey(field, hashKey, preKey, ret)));
+                    Map<Object, String> preKey = Maps.newHashMap();
+                    ClassField<HV> classField = getClassField(clazzNow, fields, field -> keys.addAll(findHashKey(field, hashKey, preKey, ret)));
                     if (!ret) {
                         Assert.isTrue(classField.getPrimaryKey().size() == 1, "该方法只适用于单个主键");
                     }
@@ -184,35 +191,44 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
      * @param ret     是否为对象
      * @return hashkey
      */
-    private String findHashKey(Field field, Object hashKey, String preKey, boolean ret) {
-        if (ret) {
-            try {
-                if (!Strings.isNotEmpty(preKey)) {
-                    preKey = getHashKeyPre((HV) hashKey);
+    private List<String> findHashKey(Field field, Collection hashKey, Map<Object, String> preKey, boolean ret) {
+        List<String> list = Lists.newArrayList();
+        for (Object o : hashKey) {
+            if (ret) {
+                try {
+                    if (!preKey.containsKey(hashKey)) {
+                        String hashKeyPre = getHashKeyPre((HV) o);
+                        preKey.put(o, hashKeyPre);
+                        list.add(new StringJoiner(DIVIDE).add(hashKeyPre).add(field.getName()).toString());
+                    }
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
                 }
-                return new StringJoiner(DIVIDE).add(preKey).add(field.getName()).toString();
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
+            } else {
+                list.add(new StringJoiner(DIVIDE).add(Objects.toString(hashKey)).add(field.getName()).toString());
             }
         }
-        return new StringJoiner(DIVIDE).add(Objects.toString(hashKey)).add(field.getName()).toString();
+        return list;
     }
 
     /**
      * @return map 转成属性对象
      */
-    private HV doFinally(ClassField<HV> classField, Map<String, Object> valueMap) {
+    private List<HV> doFinally(ClassField<HV> classField, Map<String,Map<String, Object>> valueMap) {
+        List<HV> hvs = Lists.newArrayList();
         try {
-            HV hv = classField.getClazz().getDeclaredConstructor().newInstance();
-            for (Field field : classField.getDeclaredFields()) {
-                field.setAccessible(true);
-                field.set(hv, valueMap.get(field.getName()));
+            for (Map<String, Object> entry : valueMap.values()) {
+                HV hv = classField.getClazz().getDeclaredConstructor().newInstance();
+                for (Field field : classField.getDeclaredFields()) {
+                    field.setAccessible(true);
+                    field.set(hv, entry.get(field.getName()));
+                }
+                hvs.add(hv);
             }
-            return hv;
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return null;
+        return hvs;
     }
 
     /**
@@ -220,18 +236,24 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
      * @param values redis Hash Value
      * @return 组成 FieldName-value Map
      */
-    private Map<String, Object> toMap(List<String> keys, List<Object> values) {
+    private Map<String,Map<String, Object>> toMap(List<String> keys, List<Object> values) {
         Assert.isTrue(keys.size() == values.size(), "key和value数量不相等 ");
-        Map<String, Object> map = Maps.newHashMap();
+        Map<String,Map<String, Object>> allMap = Maps.newHashMap();
         for (int i = 0; i < keys.size(); i++) {
             String key = keys.get(i);
             Object value = values.get(i);
             String[] split = key.split(":");
             Assert.isTrue(split.length > 0, "分割属性出错 ");
+            String hashKey = key.substring(0, key.lastIndexOf(":"));
+            Map<String, Object> map = allMap.get(hashKey);
+            if (map==null){
+                map =Maps.newHashMap();
+            }
             String fieldName = split[split.length - 1];
             map.put(fieldName, value);
+            allMap.put(hashKey,map);
         }
-        return map;
+        return allMap;
     }
 
     /**
