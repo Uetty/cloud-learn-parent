@@ -5,6 +5,7 @@ import com.uetty.rule.config.redis.operations.ReactiveClassOperations;
 import com.uetty.rule.config.redis.script.ScriptConfig;
 import com.uetty.rule.config.redis.template.RedisTemplateRule;
 import com.uetty.rule.entity.User;
+import com.uetty.rule.utils.FunctionCollection;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
@@ -22,7 +23,7 @@ public class RedisService {
     }
 
     public Mono<?> classPut(String key, Object value) {
-        return redisTemplateRule.opsForClass().putClass(key,Lists.newArrayList(value,value));
+        return redisTemplateRule.opsForClass().putClass(key, Lists.newArrayList(value, value));
     }
 
     public Mono<?> getHashFromZset(String zsetKey, String hashKey, String start, String end) {
@@ -36,6 +37,6 @@ public class RedisService {
         User user = new User();
         user.setUserId(userId);
         ReactiveClassOperations<String, String, User> classOperations = redisTemplateRule.opsForClass();
-        return classOperations.getClass(key,user,User::getUserId);
+        return classOperations.getClass(key, user, FunctionCollection.<User>create().add(User::getUserId));
     }
 }

@@ -1,6 +1,6 @@
 package com.uetty.rule.config.redis.operations;
 
-import com.uetty.rule.utils.SerializableFunction;
+import com.uetty.rule.utils.FunctionCollection;
 import reactor.core.publisher.Mono;
 
 import java.util.Collection;
@@ -28,6 +28,6 @@ public interface ReactiveClassOperations<H, HK, HV> {
      * @param hashKey 主键值
      * @return 获取对象（适用于单个主键）
      */
-    Mono<HV> getClass(H key, Object hashKey, SerializableFunction<HV, ?>... columns);
+    Mono<HV> getClass(H key, Object hashKey, FunctionCollection columns);
 
 }

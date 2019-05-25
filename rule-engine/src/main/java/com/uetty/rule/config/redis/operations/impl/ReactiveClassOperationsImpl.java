@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.uetty.rule.config.redis.annotation.RedisPrimaryKey;
 import com.uetty.rule.config.redis.operations.ReactiveClassOperations;
+import com.uetty.rule.utils.FunctionCollection;
 import com.uetty.rule.utils.LambdaUtils;
 import com.uetty.rule.utils.SerializableFunction;
 import com.uetty.rule.utils.SerializedLambda;
@@ -111,7 +112,7 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
 
     @Override
     public Mono<Boolean> putClass(H key, HV... values) {
-        return putClass(key,Arrays.asList(values));
+        return putClass(key, Arrays.asList(values));
     }
 
     @Override
@@ -142,9 +143,9 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
 
 
     @Override
-    public Mono<HV> getClass(H key, Object hashKey, SerializableFunction<HV, ?>... columns) {
+    public Mono<HV> getClass(H key, Object hashKey, FunctionCollection columns) {
         Assert.notNull(hashKey, "hashKey must not be null!");
-        List<String> fields = columnsToString(columns);
+        List<String> fields = columnsToString(columns.getFunctions());
         try {
             HV hv = (HV) hashKey;
             return this.getClassDetail(key, hashKey, (Class<HV>) hv.getClass(), fields);
@@ -309,11 +310,11 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
         return name;
     }
 
-    private List<String> columnsToString(SerializableFunction<HV, ?>... columns) {
+    private List<String> columnsToString(List<SerializableFunction<HV, ?>> columns) {
         if (columns == null) {
             return Lists.newArrayList();
         }
-        return Arrays.stream(columns).map(i -> getColumn(LambdaUtils.resolve(i))).collect(Collectors.toList());
+        return columns.stream().map(i -> getColumn(LambdaUtils.resolve(i))).collect(Collectors.toList());
     }
 
     /**
