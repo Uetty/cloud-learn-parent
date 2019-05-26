@@ -2,7 +2,9 @@ package com.uetty.rule.config.redis.template;
 
 import com.uetty.rule.config.redis.JacksonRedisSerializer;
 import com.uetty.rule.config.redis.operations.ReactiveClassOperations;
+import com.uetty.rule.config.redis.operations.ReactiveLuaOperations;
 import com.uetty.rule.config.redis.operations.impl.ReactiveClassOperationsImpl;
+import com.uetty.rule.config.redis.operations.impl.ReactiveLuaOperationsImpl;
 import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
@@ -21,7 +23,7 @@ public class ClassReactiveRedisTemplate<K, V> extends ReactiveRedisTemplate<K, V
         super(connectionFactory, redisSerializationContext(), exposeConnection);
     }
 
-    @SuppressWarnings({"unchecked","NullableProblems"})
+    @SuppressWarnings({"unchecked", "NullableProblems"})
     private static <K, V> RedisSerializationContext<K, V> redisSerializationContext() {
         RedisSerializationContext<String, String> string = RedisSerializationContext.string();
         RedisSerializationContext<K, V> clazz = (RedisSerializationContext<K, V>) RedisSerializationContext.fromSerializer(new JacksonRedisSerializer<>());
@@ -60,6 +62,14 @@ public class ClassReactiveRedisTemplate<K, V> extends ReactiveRedisTemplate<K, V
 
     public <K1, HK, HV> ReactiveClassOperations<K1, HK, HV> opsForClass(RedisSerializationContext<K1, ?> serializationContext) {
         return new ReactiveClassOperationsImpl<>(this, serializationContext);
+    }
+
+    public ReactiveLuaOperations opsForLua() {
+        return opsForLua(redisSerializationContext());
+    }
+
+    public ReactiveLuaOperations opsForLua(RedisSerializationContext<?, ?> serializationContext) {
+        return new ReactiveLuaOperationsImpl(this, serializationContext);
     }
 }
 
