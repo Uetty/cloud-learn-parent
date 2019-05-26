@@ -16,7 +16,7 @@ import java.util.List;
 public class ReactiveLuaOperationsImpl<K, V> implements ReactiveLuaOperations<K, V> {
 
     private final @NonNull ReactiveRedisTemplate<K, V> template;
-    private final @NonNull RedisSerializationContext<?, ?> serializationContext;
+    private final @NonNull RedisSerializationContext<K, ?> serializationContext;
 
     @Override
     public Mono<List<V>> getHashFromSortedSet(K sortedSetKey, K hashKey, long start, long end) {

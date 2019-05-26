@@ -2,19 +2,22 @@ package com.uetty.rule.service;
 
 import com.google.common.collect.Lists;
 import com.uetty.rule.config.redis.operations.ReactiveClassOperations;
+import com.uetty.rule.config.redis.operations.ReactiveLuaOperations;
 import com.uetty.rule.config.redis.template.RedisTemplateRule;
 import com.uetty.rule.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
+
 @Service
 public class RedisService {
 
-    private final RedisTemplateRule<String, Object> redisTemplateRule;
+    private final RedisTemplateRule<String, User> redisTemplateRule;
 
     @Autowired
-    public RedisService(RedisTemplateRule<String, Object> redisTemplateRule) {
+    public RedisService(RedisTemplateRule<String, User> redisTemplateRule) {
         this.redisTemplateRule = redisTemplateRule;
     }
 
@@ -22,8 +25,9 @@ public class RedisService {
         return redisTemplateRule.opsForClass().putClass(key, Lists.newArrayList(value, value));
     }
 
-    public Mono<?> getHashFromZset(String zsetKey, String hashKey, String start, String end) {
-        return null;
+    public Mono<List<User>> getHashFromZset(String zsetKey, String hashKey, String start, String end) {
+        ReactiveLuaOperations<String,User> lua = redisTemplateRule.opsForLua();
+        return lua.getHashFromSortedSet(zsetKey, hashKey, 0, -1);
     }
 
     public Mono classGet(String key, Integer userId) {

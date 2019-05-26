@@ -64,11 +64,12 @@ public class ClassReactiveRedisTemplate<K, V> extends ReactiveRedisTemplate<K, V
         return new ReactiveClassOperationsImpl<>(this, serializationContext);
     }
 
-    public ReactiveLuaOperations opsForLua() {
+    public <K2, V2> ReactiveLuaOperations<K2, V2> opsForLua() {
         return opsForLua(redisSerializationContext());
     }
 
-    public ReactiveLuaOperations opsForLua(RedisSerializationContext<?, ?> serializationContext) {
+    @SuppressWarnings("unchecked")
+    public <K2, V2> ReactiveLuaOperations<K2, V2> opsForLua(RedisSerializationContext<K2, ?> serializationContext) {
         return new ReactiveLuaOperationsImpl(this, serializationContext);
     }
 }
