@@ -5,7 +5,7 @@ import com.uetty.rule.config.redis.annotation.RedisPrimaryKey;
 import lombok.Data;
 
 @Data
-@RedisLazy
+@RedisLazy("user:detail")
 public class User {
 
     @RedisPrimaryKey
