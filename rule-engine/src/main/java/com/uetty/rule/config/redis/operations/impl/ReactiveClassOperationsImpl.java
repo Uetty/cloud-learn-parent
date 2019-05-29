@@ -117,7 +117,7 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
 
     @Override
     public Mono<Boolean> putClass(Collection<HV> values) {
-        return putClass(null,values);
+        return putClass(null, values);
     }
 
     @Override
@@ -162,15 +162,15 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
 
     @Override
     public Mono<HV> getClass(H key, FunctionCollection columns, Object hashKey) {
-        Assert.notNull(key, "key must not be null!");
         Assert.notNull(hashKey, "hashKey must not be null!");
         List<String> fields = columnsToString(columns.getFunctions());
         try {
             HV hv = (HV) hashKey;
-            return this.getClassDetail(key, Lists.newArrayList(hashKey), (Class<HV>) hv.getClass(), fields).map(list -> list.stream().findFirst().get());
+            return this.getClassDetail(getKey(key, hv.getClass()), Lists.newArrayList(hashKey), (Class<HV>) hv.getClass(), fields).map(list -> list.stream().findFirst().get());
         } catch (ClassCastException e) {
             //强转错误
         }
+        Assert.notNull(key, "key must not be null!");
         return this.getClassDetail(key, Lists.newArrayList(hashKey), null, fields).map(list -> list.stream().findFirst().get());
     }
 

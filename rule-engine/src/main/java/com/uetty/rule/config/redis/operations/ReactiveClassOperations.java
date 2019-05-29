@@ -44,6 +44,14 @@ public interface ReactiveClassOperations<H, HK, HV> {
     Mono<HV> getClass(H key, FunctionCollection columns, Object hashKey);
 
     /**
+     * @param hashKey 主键值
+     * @return 获取对象（适用于单个主键）
+     */
+    default Mono<HV> getClass(HV hashKey) {
+        return getClass(null, FunctionCollection.create(), hashKey);
+    }
+
+    /**
      * @param key     redis key
      * @param hashKey 主键值
      * @return 获取对象（适用于单个主键）
@@ -68,6 +76,12 @@ public interface ReactiveClassOperations<H, HK, HV> {
         return getClass(key, FunctionCollection.create(), hashKey);
     }
 
-    ;
+    /**
+     * @param hashKey 主键值
+     * @return 获取对象（适用于单个主键）
+     */
+    default Mono<List<HV>> getClass(Collection<HV> hashKey) {
+        return getClass(null, FunctionCollection.create(), hashKey);
+    }
 
 }
