@@ -52,6 +52,14 @@ public interface ReactiveClassOperations<H, HK, HV> {
     }
 
     /**
+     * @param hashKey 主键值
+     * @return 获取对象（适用于单个主键）
+     */
+    default Mono<HV> getClass(HV hashKey, FunctionCollection columns) {
+        return getClass(null, columns, hashKey);
+    }
+
+    /**
      * @param key     redis key
      * @param hashKey 主键值
      * @return 获取对象（适用于单个主键）
