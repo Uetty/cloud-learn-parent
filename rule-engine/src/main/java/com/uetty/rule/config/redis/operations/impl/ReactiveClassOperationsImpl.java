@@ -2,6 +2,7 @@ package com.uetty.rule.config.redis.operations.impl;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.uetty.rule.config.redis.annotation.RedisKey;
 import com.uetty.rule.config.redis.annotation.RedisPrimaryKey;
 import com.uetty.rule.config.redis.operations.ReactiveClassOperations;
 import com.uetty.rule.utils.FunctionCollection;
@@ -110,6 +111,16 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
     }
 
     @Override
+    public Mono<Boolean> putClass(HV... values) {
+        return putClass(Arrays.asList(values));
+    }
+
+    @Override
+    public Mono<Boolean> putClass(Collection<HV> values) {
+        return putClass(null,values);
+    }
+
+    @Override
     public Mono<Boolean> putClass(H key, HV... values) {
         return putClass(key, Arrays.asList(values));
     }
@@ -117,8 +128,8 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
     @Override
     public Mono<Boolean> putClass(H key, Collection<HV> values) {
         Map<String, Object> map = Maps.newHashMap();
+        Class<?> clazz = null;
         try {
-            Class<?> clazz = null;
             Field[] declaredFields = null;
             for (HV hv : values) {
                 if (clazz == null) {
@@ -135,9 +146,10 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
         } catch (Exception e) {
             e.printStackTrace();
         }
+        Class<?> finalClazz = clazz;
         return createMono(connection -> Flux.fromIterable(() -> map.entrySet().iterator())
                 .collectMap(entry -> rawHashKey(entry.getKey()), entry -> rawHashValue(entry.getValue()))
-                .flatMap(serialized -> connection.hMSet(rawKey(key), serialized)));
+                .flatMap(serialized -> connection.hMSet(rawKey(getKey(key, finalClazz)), serialized)));
     }
 
     @Override
@@ -155,11 +167,22 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
         List<String> fields = columnsToString(columns.getFunctions());
         try {
             HV hv = (HV) hashKey;
-            return this.getClassDetail(key, Lists.newArrayList(hashKey), (Class<HV>) hv.getClass(), fields).map(list->list.stream().findFirst().get());
+            return this.getClassDetail(key, Lists.newArrayList(hashKey), (Class<HV>) hv.getClass(), fields).map(list -> list.stream().findFirst().get());
         } catch (ClassCastException e) {
             //强转错误
         }
-        return this.getClassDetail(key, Lists.newArrayList(hashKey), null, fields).map(list->list.stream().findFirst().get());
+        return this.getClassDetail(key, Lists.newArrayList(hashKey), null, fields).map(list -> list.stream().findFirst().get());
+    }
+
+    private H getKey(H key, Class<?> clazz) {
+        if (key == null) {
+            Assert.notNull(clazz, "clazz must not be null!");
+            RedisKey redisKey = clazz.getAnnotation(RedisKey.class);
+            Assert.notNull(clazz, "clazz must not be null!");
+            key = (H) redisKey.value();
+            Assert.notNull(key, "@RedisKey value 不能没有key");
+        }
+        return key;
     }
 
     private Mono<List<HV>> getClassDetail(H key, Collection hashKey, Class<HV> clazz, List<String> fields) {
@@ -214,7 +237,7 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
     /**
      * @return map 转成属性对象
      */
-    private List<HV> doFinally(ClassField<HV> classField, Map<String,Map<String, Object>> valueMap) {
+    private List<HV> doFinally(ClassField<HV> classField, Map<String, Map<String, Object>> valueMap) {
         List<HV> hvs = Lists.newArrayList();
         try {
             for (Map<String, Object> entry : valueMap.values()) {
@@ -236,9 +259,9 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
      * @param values redis Hash Value
      * @return 组成 FieldName-value Map
      */
-    private Map<String,Map<String, Object>> toMap(List<String> keys, List<Object> values) {
+    private Map<String, Map<String, Object>> toMap(List<String> keys, List<Object> values) {
         Assert.isTrue(keys.size() == values.size(), "key和value数量不相等 ");
-        Map<String,Map<String, Object>> allMap = Maps.newHashMap();
+        Map<String, Map<String, Object>> allMap = Maps.newHashMap();
         for (int i = 0; i < keys.size(); i++) {
             String key = keys.get(i);
             Object value = values.get(i);
@@ -246,12 +269,12 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
             Assert.isTrue(split.length > 0, "分割属性出错 ");
             String hashKey = key.substring(0, key.lastIndexOf(":"));
             Map<String, Object> map = allMap.get(hashKey);
-            if (map==null){
-                map =Maps.newHashMap();
+            if (map == null) {
+                map = Maps.newHashMap();
             }
             String fieldName = split[split.length - 1];
             map.put(fieldName, value);
-            allMap.put(hashKey,map);
+            allMap.put(hashKey, map);
         }
         return allMap;
     }
@@ -344,8 +367,6 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
      */
     private String getColumn(SerializedLambda lambda) {
         return methodToProperty(lambda.getImplMethodName());
-
-
     }
 }
 

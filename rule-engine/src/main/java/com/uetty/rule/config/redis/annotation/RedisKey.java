@@ -8,7 +8,7 @@ import java.lang.annotation.*;
 @Documented
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface RedisLazy {
+public @interface RedisKey {
 
     /**
      * @return 使用的redisTemplate

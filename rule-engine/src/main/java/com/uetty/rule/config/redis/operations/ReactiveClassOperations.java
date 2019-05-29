@@ -10,6 +10,18 @@ import java.util.List;
 public interface ReactiveClassOperations<H, HK, HV> {
 
     /**
+     * @param values 对象信息
+     * @return 存储redis 主键:属性  值的形式
+     */
+    Mono<Boolean> putClass(HV... values);
+
+    /**
+     * @param values 对象信息
+     * @return 存储redis 主键:属性  值的形式
+     */
+    Mono<Boolean> putClass(Collection<HV> values);
+
+    /**
      * @param key    redis key
      * @param values 对象信息
      * @return 存储redis 主键:属性  值的形式
