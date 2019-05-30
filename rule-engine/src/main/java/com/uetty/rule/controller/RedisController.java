@@ -31,6 +31,11 @@ public class RedisController implements RedisLuaApi {
         return redisService.classGet("user:detail", userId);
     };
 
+    @GetMapping("/log")
+    public Mono classGet(){
+        return redisService.log();
+    };
+
     @GetMapping("/getHashFromZset")
     public Mono getHashFromZset() {
         return redisService.getHashFromZset("user:sroce", "user:detail", "0", "-1");
