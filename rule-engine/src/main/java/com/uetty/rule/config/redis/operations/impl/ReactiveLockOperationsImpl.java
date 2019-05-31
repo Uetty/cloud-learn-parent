@@ -1,12 +1,14 @@
 package com.uetty.rule.config.redis.operations.impl;
 
 import com.uetty.rule.config.redis.operations.ReactiveLockOperations;
+import com.uetty.rule.config.redis.script.ScriptConfig;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.redisson.Redisson;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import reactor.core.publisher.Mono;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
@@ -18,6 +20,8 @@ import java.util.concurrent.locks.Condition;
 public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
 
     private final @NonNull ReactiveRedisTemplate<?, ?> template;
+
+    public static final long LOCK_EXPIRATION_INTERVAL_SECONDS = 30;
 
     @Override
     public void lock() {
@@ -58,6 +62,18 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
         long threadId = Thread.currentThread().getId();
     }
 
+    private Mono<Long> tryAcquire(long leaseTime, TimeUnit unit, long threadId) {
+        if (leaseTime != -1) {
+            //不等待，直接执行
+            return tryLockInnerAsync(leaseTime, unit, threadId);
+        }
+        return tryLockInnerAsync(LOCK_EXPIRATION_INTERVAL_SECONDS, TimeUnit.SECONDS, threadId);
+    }
+
+    private Mono<Long> tryLockInnerAsync(long leaseTime, TimeUnit unit, long threadId) {
+        return template.execute(ScriptConfig.<Long>getScript(ScriptConfig.ScriptType.LOCK)).last();
+    }
+
     @Override
     public boolean tryLock(long var1, long var3, TimeUnit var5) throws InterruptedException {
         return false;
@@ -91,5 +107,7 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
     public static void main(String[] args) {
         RedissonClient client = Redisson.create();
         RLock lock = client.getLock("aa");
+
+
     }
 }
