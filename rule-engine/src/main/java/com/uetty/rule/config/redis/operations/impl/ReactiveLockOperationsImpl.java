@@ -10,6 +10,7 @@ import org.redisson.api.RedissonClient;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import reactor.core.publisher.Mono;
 
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 
@@ -22,6 +23,7 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
     private final @NonNull ReactiveRedisTemplate<?, ?> template;
 
     public static final long LOCK_EXPIRATION_INTERVAL_SECONDS = 30;
+    final UUID id;
 
     @Override
     public void lock() {
@@ -58,8 +60,25 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
     }
 
     @Override
-    public void lockInterruptibly(long var1, TimeUnit var3) throws InterruptedException {
+    public void lockInterruptibly(long leaseTime, TimeUnit unit) throws InterruptedException {
         long threadId = Thread.currentThread().getId();
+        tryAcquire(leaseTime, unit, threadId)
+                .map(ttl -> {
+                    if (ttl != null) {
+                        subscribe(threadId);
+                    }
+                    return null;
+                });
+    }
+
+
+    /**
+     * 订阅
+     *
+     * @param threadId 线程id
+     */
+    private void subscribe(long threadId) {
+        template.listenTo();
     }
 
     private Mono<Long> tryAcquire(long leaseTime, TimeUnit unit, long threadId) {
@@ -103,6 +122,12 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
     public int getHoldCount() {
         return 0;
     }
+
+
+    protected String getEntryName(String keyName) {
+        return id + ":" + keyName;
+    }
+
 
     public static void main(String[] args) {
         RedissonClient client = Redisson.create();
