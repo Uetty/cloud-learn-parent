@@ -5,6 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
+import org.springframework.data.redis.connection.RedisClusterConfiguration;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 
@@ -26,6 +27,7 @@ public class RuleRedis {
     }
 
     private ReactiveRedisConnectionFactory ruleConnectionFactory(RedisConfig ruleRedisConfig) {
+        RedisClusterConfiguration redisClusterConfiguration = new RedisClusterConfiguration();
         RedisStandaloneConfiguration configuration = new RedisStandaloneConfiguration();
         configuration.setDatabase(ruleRedisConfig.getDbIndex());
         configuration.setHostName(ruleRedisConfig.getHost());

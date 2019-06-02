@@ -1,5 +1,7 @@
 package com.uetty.rule.config.redis.operations;
 
+import reactor.core.publisher.Mono;
+
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -7,7 +9,7 @@ import java.util.concurrent.TimeUnit;
  */
 public interface ReactiveLockOperations{
 
-    void lockInterruptibly(String key,long leaseTime, TimeUnit var3) throws InterruptedException;
+    Mono<Void> lockInterruptibly(String key, long leaseTime, TimeUnit var3) throws InterruptedException;
 
     boolean tryLock(long var1, long var3, TimeUnit var5) throws InterruptedException;
 

@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.redisson.Redisson;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.springframework.data.redis.connection.ReactiveSubscription;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import reactor.core.publisher.Mono;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 
 /**
@@ -38,16 +40,16 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
         return serializationContext.getHashValueSerializationPair().write(key);
     }
 
-    public void lock(String key) {
+    public Mono<Void> lock(String key) {
         try {
-            lockInterruptibly(key);
+            return lockInterruptibly(key);
         } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+            return Mono.error(e);
         }
     }
 
-    public void lockInterruptibly(String key) throws InterruptedException {
-        lockInterruptibly(key, -1, null);
+    public Mono<Void> lockInterruptibly(String key) throws InterruptedException {
+        return lockInterruptibly(key, -1, null);
     }
 
     public Mono<Boolean> tryLock(String key) {
@@ -82,13 +84,30 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
     }
 
     @Override
-    public void lockInterruptibly(String key, long leaseTime, TimeUnit unit) throws InterruptedException {
+    public Mono<Void> lockInterruptibly(String key, long leaseTime, TimeUnit unit) throws InterruptedException {
         long threadId = Thread.currentThread().getId();
+        AtomicReference<Long> tta = new AtomicReference<>();
         //尝试获取锁
-        tryAcquire(key, leaseTime, unit, threadId)
+        return tryAcquire(key, leaseTime, unit, threadId)
                 .filter(Objects::nonNull)//过期时间为空，则代表获取到锁。
-                .flatMapMany(ttl -> this.subscribe(key))//没获取到锁，订阅该key，等待其他线程释放锁，其他线程释放锁的时候发布
-                .then(this.unsubscribe(key));
+                .flatMapMany(time -> this.subscribe(key))//没获取到锁，订阅该key，等待其他线程释放锁，其他线程释放锁的时候发布
+                .flatMap(v -> {
+                    return tryAcquire(key, leaseTime, unit, threadId)//上锁后再获取一次锁
+                            .flatMap(ttl -> { //监听订阅，获取发布的信息
+                                tta.set(ttl);
+                                if (ttl >= 0) {
+                                    return getEntry(key).flatMap(message -> tryAcquire(key, ttl, TimeUnit.MILLISECONDS, threadId));
+                                } else {
+                                    return getEntry(key).flatMap(message -> tryAcquire(key, 0L, TimeUnit.MILLISECONDS, threadId));
+                                }
+                            })
+                            .repeat(() -> tta.get() != null);//循环，直到ttl为null
+                })
+                .then(this.unsubscribe(key));//取消订阅
+    }
+
+    private Mono<? extends ReactiveSubscription.Message<String, ?>> getEntry(String key) {
+        return template.listenToChannel(getEntryName(key)).next();
     }
 
 
