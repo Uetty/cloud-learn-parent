@@ -3,16 +3,19 @@ package com.uetty.rule.config.redis.operations.impl;
 import com.google.common.collect.Lists;
 import com.uetty.rule.config.redis.operations.ReactiveLockOperations;
 import com.uetty.rule.config.redis.script.ScriptConfig;
+import com.uetty.rule.config.redis.template.ClassReactiveRedisTemplate;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.redisson.Redisson;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
-import org.springframework.data.redis.listener.ChannelTopic;
+import org.springframework.data.redis.serializer.RedisSerializationContext;
 import reactor.core.publisher.Mono;
 
+import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
@@ -23,12 +26,17 @@ import java.util.concurrent.locks.Condition;
 @RequiredArgsConstructor
 public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
 
-    private final @NonNull ReactiveRedisTemplate<?, ?> template;
+    private final @NonNull ClassReactiveRedisTemplate<?, ?> template;
+    private final @NonNull RedisSerializationContext<?, ?> serializationContext;
 
     private static final long LOCK_EXPIRATION_INTERVAL_SECONDS = 30;
     //初始过期时间
     protected long internalLockLeaseTime = TimeUnit.SECONDS.toMillis(LOCK_EXPIRATION_INTERVAL_SECONDS);
     final UUID id;
+
+    private ByteBuffer rawKey(Object key) {
+        return serializationContext.getHashValueSerializationPair().write(key);
+    }
 
     public void lock(String key) {
         try {
@@ -78,25 +86,27 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
         long threadId = Thread.currentThread().getId();
         //尝试获取锁
         tryAcquire(key, leaseTime, unit, threadId)
-                .map(ttl -> {
-                    //判断过期时间
-                    if (ttl != null) {
-                        //订阅该线程，通知已经该线程已经获得锁
-                        subscribe(key, threadId);
-                    }
-                    return null;
-                });
+                .filter(Objects::nonNull)//过期时间为空，则代表获取到锁。
+                .flatMapMany(ttl -> this.subscribe(key))//没获取到锁，订阅该key，等待其他线程释放锁，其他线程释放锁的时候发布
+                .then(this.unsubscribe(key));
     }
 
 
     /**
      * 订阅
      *
-     * @param key      reids key
-     * @param threadId 线程id
+     * @param key reids key
      */
-    private void subscribe(String key, long threadId) {
-        template.listenTo(ChannelTopic.of(getChannelName(key)));
+    private Mono<Void> subscribe(String key) {
+        return template.execute(a -> a.pubSubCommands().subscribe(rawKey(key))).next();
+    }
+
+    /**
+     * @param key reids key
+     * @return 取消订阅
+     */
+    private Mono<Void> unsubscribe(String key) {
+        return template.execute(a -> a.pubSubCommands().createSubscription().flatMap(sub -> sub.unsubscribe(rawKey(key)))).next();
     }
 
     private Mono<Long> tryAcquire(String key, long leaseTime, TimeUnit unit, long threadId) {
