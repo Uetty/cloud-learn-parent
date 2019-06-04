@@ -6,6 +6,8 @@ import com.uetty.rule.config.redis.script.ScriptConfig;
 import com.uetty.rule.config.redis.template.ClassReactiveRedisTemplate;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import org.redisson.Redisson;
+import org.redisson.api.RedissonClient;
 import org.springframework.data.redis.connection.ReactiveSubscription;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
@@ -20,7 +22,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 
 /**
- * redis lock
+ * redis lock(重入锁)
  */
 @RequiredArgsConstructor
 public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
@@ -88,18 +90,18 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
         return tryAcquire(key, leaseTime, unit, threadId)
                 .filter(Objects::nonNull)//过期时间为空，则代表获取到锁。
                 .flatMapMany(time -> this.subscribe(key))//没获取到锁，订阅该key，等待其他线程释放锁，其他线程释放锁的时候发布
-                .flatMap(v -> {
-                    return tryAcquire(key, leaseTime, unit, threadId)//上锁后再获取一次锁
-                            .flatMap(ttl -> { //监听订阅，获取发布的信息
-                                tta.set(ttl);
-                                if (ttl >= 0) {
-                                    return getEntry(key).flatMap(message -> tryAcquire(key, ttl, TimeUnit.MILLISECONDS, threadId));
-                                } else {
-                                    return getEntry(key).flatMap(message -> tryAcquire(key, 0L, TimeUnit.MILLISECONDS, threadId));
-                                }
-                            })
-                            .repeat(() -> tta.get() != null);//循环，直到ttl为null
-                })
+                .map(v -> tryAcquire(key, leaseTime, unit, threadId)//上锁后再获取一次锁
+                        .flatMap(ttl -> { //监听订阅，获取发布的信息
+                            tta.set(ttl);
+                            if (ttl >= 0) {
+                                return getEntry(key).flatMap(message -> tryAcquire(key, ttl, TimeUnit.MILLISECONDS, threadId));
+                            } else {
+                                return getEntry(key).flatMap(message -> tryAcquire(key, 0L, TimeUnit.MILLISECONDS, threadId));
+                            }
+                        })
+                        .repeat(() -> tta.get() != null)//循环，直到ttl为null
+                        .subscribe()
+                )
                 .then(this.unsubscribe(key));//取消订阅
     }
 
@@ -157,7 +159,7 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
         //hash key（uuid+threadid）
         params.add(getLockName(threadId));
         ReactiveRedisTemplate<String, Object> template = (ReactiveRedisTemplate<String, Object>) this.template;
-        return template.execute(ScriptConfig.<T>getScript(ScriptConfig.ScriptType.LOCK), keys, params).last();
+        return template.execute(ScriptConfig.<T>getScript(ScriptConfig.ScriptType.LOCK), keys, params).next();
     }
 
     @Override
@@ -210,5 +212,8 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
         return id + ":" + threadId;
     }
 
-
+    public static void main(String[] args) throws InterruptedException {
+        RedissonClient redisson = Redisson.create();
+        redisson.getLock("");
+    }
 }
