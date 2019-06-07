@@ -1,9 +1,12 @@
 package com.uetty.rule.config.redis.operations.impl;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.uetty.rule.config.redis.lock.LockPubSub;
 import com.uetty.rule.config.redis.operations.ReactiveLockOperations;
 import com.uetty.rule.config.redis.script.ScriptConfig;
 import com.uetty.rule.config.redis.template.ClassReactiveRedisTemplate;
+import io.netty.util.Timeout;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.redisson.Redisson;
@@ -17,6 +20,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
@@ -30,6 +34,8 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
     private final @NonNull ClassReactiveRedisTemplate<?, ?> template;
     private final @NonNull RedisSerializationContext<?, ?> serializationContext;
 
+    private static final ConcurrentMap<String, Timeout> expirationRenewalMap = Maps.newConcurrentMap();
+    //默认过期时间
     private static final long LOCK_EXPIRATION_INTERVAL_SECONDS = 30;
     //初始过期时间
     protected long internalLockLeaseTime = TimeUnit.SECONDS.toMillis(LOCK_EXPIRATION_INTERVAL_SECONDS);
@@ -74,8 +80,34 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
         return false;
     }
 
-    public void unlock() {
+    public Mono<Void> unlock(String key) {
+        return unlockInnerAsync(key, Thread.currentThread().getId())
+                .doOnSuccess(opStatus -> {
+                    if (opStatus == null) {
+                        throw new IllegalMonitorStateException("attempt to unlock lock, not locked by current thread by node id: "
+                                + id + " thread-id: " + Thread.currentThread().getId());
+                    }
+                    if (opStatus) {
+                        cancelExpirationRenewal(key);
+                    }
+                })
+                .then();
+    }
 
+    private void cancelExpirationRenewal(String key) {
+        Timeout task = expirationRenewalMap.remove(getEntryName(key));
+        if (task != null) {
+            task.cancel();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Mono<Boolean> unlockInnerAsync(String key, long threadId) {
+        ReactiveRedisTemplate<String, Object> template = (ReactiveRedisTemplate<String, Object>) this.template;
+        return template.execute(ScriptConfig.<Boolean>getScript(ScriptConfig.ScriptType.UN_LOCK),
+                Lists.newArrayList(key, getChannelName(key)),
+                Lists.newArrayList(LockPubSub.unlockMessage, internalLockLeaseTime, getLockName(threadId)))
+                .next();
     }
 
     public Condition newCondition() {
