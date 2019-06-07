@@ -7,6 +7,7 @@ import com.uetty.rule.config.redis.operations.ReactiveLockOperations;
 import com.uetty.rule.config.redis.script.ScriptConfig;
 import com.uetty.rule.config.redis.template.ClassReactiveRedisTemplate;
 import io.netty.util.Timeout;
+import io.netty.util.TimerTask;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.redisson.Redisson;
@@ -191,7 +192,39 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
         //hash key（uuid+threadid）
         params.add(getLockName(threadId));
         ReactiveRedisTemplate<String, Object> template = (ReactiveRedisTemplate<String, Object>) this.template;
-        return template.execute(ScriptConfig.<T>getScript(ScriptConfig.ScriptType.LOCK), keys, params).next();
+        return template.execute(ScriptConfig.<T>getScript(ScriptConfig.ScriptType.LOCK), keys, params)
+                .next()
+                .doOnSuccess(ttl -> {
+                    if (ttl == null) {
+                        scheduleExpirationRenewal(key, threadId);
+                    }
+                });
+    }
+
+    private void scheduleExpirationRenewal(String key, long threadId) {
+        if (expirationRenewalMap.containsKey(getEntryName(key))) {
+            return;
+        }
+        ReactiveRedisTemplate<String, Object> template = (ReactiveRedisTemplate<String, Object>) this.template;
+        TimerTask task = new TimerTask() {
+            @Override
+            public void run(Timeout timeout) throws Exception {
+                template.execute(ScriptConfig.<Boolean>getScript(ScriptConfig.ScriptType.SCHEDULE_LOCK),
+                        Lists.newArrayList(key),
+                        Lists.newArrayList(internalLockLeaseTime, getLockName(threadId)))
+                        .next()
+                        .doOnSuccess(ret->{
+                            expirationRenewalMap.remove(getEntryName(key));
+                            if (ret){
+                                scheduleExpirationRenewal(key,threadId);
+                            }
+                        })
+                        .subscribe();
+            }
+        };
+        if (expirationRenewalMap.putIfAbsent(getEntryName(key), null) != null) {
+//            task.cancel();
+        }
     }
 
     @Override
