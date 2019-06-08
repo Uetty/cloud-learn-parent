@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
+
 @RestController
 @RequestMapping("/redis")
 public class RedisController implements RedisLuaApi {
@@ -19,7 +21,7 @@ public class RedisController implements RedisLuaApi {
     }
 
     @GetMapping("/classPut")
-    public Mono classPut(Integer userId,String userName) {
+    public Mono classPut(Integer userId, String userName) {
         User user = new User();
         user.setUserId(userId);
         user.setUserName(userName);
@@ -27,17 +29,29 @@ public class RedisController implements RedisLuaApi {
     }
 
     @GetMapping("/classGet")
-    public Mono classGet(Integer userId){
+    public Mono classGet(Integer userId) {
         return redisService.classGet("user:detail", userId);
-    };
+    }
+
+    ;
 
     @GetMapping("/log")
-    public Mono classGet(){
+    public Mono classGet() {
         return redisService.log();
-    };
+    }
+
+    ;
 
     @GetMapping("/getHashFromZset")
     public Mono getHashFromZset() {
         return redisService.getHashFromZset("user:sroce", "user:detail", "0", "-1");
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        Mono.delay(Duration.ofMillis(500))
+                .doOnSuccess(a -> System.out.println(1))
+                .repeat()
+                .subscribe();
+        Thread.sleep(10000L);
     }
 }

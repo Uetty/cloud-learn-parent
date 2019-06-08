@@ -7,7 +7,6 @@ import com.uetty.rule.config.redis.operations.ReactiveLockOperations;
 import com.uetty.rule.config.redis.script.ScriptConfig;
 import com.uetty.rule.config.redis.template.ClassReactiveRedisTemplate;
 import io.netty.util.Timeout;
-import io.netty.util.TimerTask;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.redisson.Redisson;
@@ -15,6 +14,7 @@ import org.redisson.api.RedissonClient;
 import org.springframework.data.redis.connection.ReactiveSubscription;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.nio.ByteBuffer;
@@ -160,6 +160,13 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
         return template.execute(a -> a.pubSubCommands().createSubscription().flatMap(sub -> sub.unsubscribe(rawKey(key)))).next();
     }
 
+    /**
+     * @param key       锁名
+     * @param leaseTime 过期时间
+     * @param unit      时间单位
+     * @param threadId  线程id
+     * @return 申请锁并返回锁有效期还剩余的时间（如果为空说明锁未被其它线程申请直接获取并返回，如果获取到时间，则进入等待竞争逻辑）
+     */
     private Mono<Long> tryAcquire(String key, long leaseTime, TimeUnit unit, long threadId) {
         return tryAcquireAsync(key, leaseTime, unit, threadId);
     }
@@ -196,35 +203,32 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
                 .next()
                 .doOnSuccess(ttl -> {
                     if (ttl == null) {
+                        //过期时间不为空，进入竞争锁状态
                         scheduleExpirationRenewal(key, threadId);
                     }
                 });
     }
 
+    /**
+     * 过期时间不为空，进入竞争锁状态
+     *
+     * @param key      锁名
+     * @param threadId 线程id
+     */
+    @SuppressWarnings("unchecked")
     private void scheduleExpirationRenewal(String key, long threadId) {
-        if (expirationRenewalMap.containsKey(getEntryName(key))) {
-            return;
-        }
         ReactiveRedisTemplate<String, Object> template = (ReactiveRedisTemplate<String, Object>) this.template;
-        TimerTask task = new TimerTask() {
-            @Override
-            public void run(Timeout timeout) throws Exception {
-                template.execute(ScriptConfig.<Boolean>getScript(ScriptConfig.ScriptType.SCHEDULE_LOCK),
-                        Lists.newArrayList(key),
-                        Lists.newArrayList(internalLockLeaseTime, getLockName(threadId)))
-                        .next()
-                        .doOnSuccess(ret->{
-                            expirationRenewalMap.remove(getEntryName(key));
-                            if (ret){
-                                scheduleExpirationRenewal(key,threadId);
-                            }
-                        })
-                        .subscribe();
-            }
-        };
-        if (expirationRenewalMap.putIfAbsent(getEntryName(key), null) != null) {
-//            task.cancel();
-        }
+        Flux<Boolean> repeat = template.execute(ScriptConfig.<Boolean>getScript(ScriptConfig.ScriptType.SCHEDULE_LOCK),
+                Lists.newArrayList(key),
+                Lists.newArrayList(internalLockLeaseTime, getLockName(threadId)))
+                .next()
+                .doOnSuccess(ret -> {
+                    expirationRenewalMap.remove(getEntryName(key));
+                    if (ret) {
+                        scheduleExpirationRenewal(key, threadId);
+                    }
+                })
+                .repeat();
     }
 
     @Override
