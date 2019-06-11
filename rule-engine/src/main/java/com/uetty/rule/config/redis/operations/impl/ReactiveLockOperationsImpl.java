@@ -9,9 +9,6 @@ import com.uetty.rule.config.redis.template.ClassReactiveRedisTemplate;
 import io.netty.util.Timeout;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import org.redisson.Redisson;
-import org.redisson.api.RLock;
-import org.redisson.api.RedissonClient;
 import org.springframework.data.redis.connection.ReactiveSubscription;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
@@ -282,9 +279,4 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
         return id + ":" + threadId;
     }
 
-    public static void main(String[] args) throws InterruptedException {
-        RedissonClient redisson = Redisson.create();
-        RLock lock = redisson.getLock("");
-        lock.tryLock();
-    }
 }
