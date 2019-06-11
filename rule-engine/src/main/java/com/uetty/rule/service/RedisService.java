@@ -2,6 +2,7 @@ package com.uetty.rule.service;
 
 import com.google.common.collect.Lists;
 import com.uetty.rule.config.redis.operations.ReactiveClassOperations;
+import com.uetty.rule.config.redis.operations.ReactiveLockOperations;
 import com.uetty.rule.config.redis.operations.ReactiveLuaOperations;
 import com.uetty.rule.config.redis.template.RedisTemplateRule;
 import com.uetty.rule.entity.User;
@@ -47,5 +48,10 @@ public class RedisService {
         ReactiveHyperLogLogOperations<String, String> hyperLogLog = redisTemplateRule1.opsForHyperLogLog();
         return hyperLogLog.add("key", "1", "2", "3", "3", "2")
                 .flatMap(i -> hyperLogLog.size("key"));
+    }
+
+    public Mono<Boolean> redisLock(){
+        ReactiveLockOperations lock = redisTemplateRule.opsForLock();
+        return lock.tryLock("key");
     }
 }

@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisClusterConfiguration;
 import org.springframework.data.redis.connection.RedisNode;
+import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 
 /**
@@ -27,12 +28,30 @@ public class RuleRedis {
         return new RedisTemplateRule(ruleConnectionFactory(ruleRedisConfig));
     }
 
-    private ReactiveRedisConnectionFactory ruleConnectionFactory(RedisConfig ruleRedisConfig) {
+    /**
+     * @param ruleRedisConfig redis 配置
+     * @return 集群配置
+     */
+    private ReactiveRedisConnectionFactory ruleClusterConnectionFactory(RedisConfig ruleRedisConfig) {
         RedisClusterConfiguration redisClusterConfiguration = new RedisClusterConfiguration();
         redisClusterConfiguration.setPassword(ruleRedisConfig.getPassword());
-        RedisNode redisNode =new RedisNode(ruleRedisConfig.getHost(),ruleRedisConfig.getPort());
+        RedisNode redisNode = new RedisNode(ruleRedisConfig.getHost(), ruleRedisConfig.getPort());
         redisClusterConfiguration.setClusterNodes(Lists.newArrayList(redisNode));
         LettuceConnectionFactory factory = new LettuceConnectionFactory(redisClusterConfiguration);
+        factory.afterPropertiesSet();
+        return factory;
+    }
+
+    /**
+     * @return 单机配置
+     */
+    private ReactiveRedisConnectionFactory ruleConnectionFactory(RedisConfig ruleRedisConfig) {
+        RedisStandaloneConfiguration configuration = new RedisStandaloneConfiguration();
+        configuration.setDatabase(ruleRedisConfig.getDbIndex());
+        configuration.setHostName(ruleRedisConfig.getHost());
+        configuration.setPort(ruleRedisConfig.getPort());
+        configuration.setPassword(ruleRedisConfig.getPassword());
+        LettuceConnectionFactory factory = new LettuceConnectionFactory(configuration);
         factory.afterPropertiesSet();
         return factory;
     }

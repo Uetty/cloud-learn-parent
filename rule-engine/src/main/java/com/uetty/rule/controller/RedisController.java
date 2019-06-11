@@ -54,4 +54,10 @@ public class RedisController implements RedisLuaApi {
                 .subscribe();
         Thread.sleep(10000L);
     }
+
+    @Override
+    @GetMapping("/lock")
+    public Mono lock() {
+        return redisService.redisLock();
+    }
 }

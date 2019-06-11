@@ -21,4 +21,9 @@ public class RedisLuaHystrix implements RedisLuaApi {
     public Mono getHashFromZset() {
         return null;
     }
+
+    @Override
+    public Mono lock() {
+        return null;
+    }
 }

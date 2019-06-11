@@ -2,12 +2,16 @@ package com.uetty.rule.config.redis.template;
 
 import com.uetty.rule.config.redis.JacksonRedisSerializer;
 import com.uetty.rule.config.redis.operations.ReactiveClassOperations;
+import com.uetty.rule.config.redis.operations.ReactiveLockOperations;
 import com.uetty.rule.config.redis.operations.ReactiveLuaOperations;
 import com.uetty.rule.config.redis.operations.impl.ReactiveClassOperationsImpl;
+import com.uetty.rule.config.redis.operations.impl.ReactiveLockOperationsImpl;
 import com.uetty.rule.config.redis.operations.impl.ReactiveLuaOperationsImpl;
 import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
+
+import java.util.UUID;
 
 public class ClassReactiveRedisTemplate<K, V> extends ReactiveRedisTemplate<K, V> {
 
@@ -71,6 +75,11 @@ public class ClassReactiveRedisTemplate<K, V> extends ReactiveRedisTemplate<K, V
     @SuppressWarnings("unchecked")
     public <K2, V2> ReactiveLuaOperations<K2, V2> opsForLua(RedisSerializationContext<K2, ?> serializationContext) {
         return new ReactiveLuaOperationsImpl(this, serializationContext);
+    }
+
+
+    public ReactiveLockOperations opsForLock() {
+        return new ReactiveLockOperationsImpl(this, redisSerializationContext(), UUID.randomUUID());
     }
 }
 

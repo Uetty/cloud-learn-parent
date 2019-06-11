@@ -56,6 +56,7 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
         return lockInterruptibly(key, -1, null);
     }
 
+    @Override
     public Mono<Boolean> tryLock(String key) {
         return tryLockAsync(key);
     }
@@ -72,7 +73,7 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
         if (leaseTime != -1) {
             return tryLockInnerAsync(key, leaseTime, unit, threadId);
         }
-        return null;
+        return tryLockInnerAsync(key, LOCK_EXPIRATION_INTERVAL_SECONDS, TimeUnit.SECONDS, threadId);
     }
 
     public boolean tryLock(long time, TimeUnit unit) throws InterruptedException {
@@ -113,7 +114,6 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
         return null;
     }
 
-    @Override
     public Mono<Void> lockInterruptibly(String key, long leaseTime, TimeUnit unit) throws InterruptedException {
         long threadId = Thread.currentThread().getId();
         AtomicReference<Long> tta = new AtomicReference<>();
@@ -193,7 +193,7 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
         keys.add(key);
         List<Object> params = Lists.newArrayList();
         //初始过期时间
-        params.add(internalLockLeaseTime);
+        params.add((int)internalLockLeaseTime);
         //hash key（uuid+threadid）
         params.add(getLockName(threadId));
         ReactiveRedisTemplate<String, Object> template = (ReactiveRedisTemplate<String, Object>) this.template;
@@ -229,32 +229,26 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
                 .repeat();
     }
 
-    @Override
-    public boolean tryLock(long var1, long var3, TimeUnit var5) throws InterruptedException {
-        return false;
+    public Mono<Boolean> tryLock(String key, long leaseTime, long threadId, TimeUnit unit) throws InterruptedException {
+        return null;
     }
 
-    @Override
     public void lock(long var1, TimeUnit var3) {
 
     }
 
-    @Override
     public void forceUnlock() {
 
     }
 
-    @Override
     public boolean isLocked() {
         return false;
     }
 
-    @Override
     public boolean isHeldByCurrentThread() {
         return false;
     }
 
-    @Override
     public int getHoldCount() {
         return 0;
     }

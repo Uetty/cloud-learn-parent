@@ -22,4 +22,7 @@ public interface RedisLuaApi extends HystrixClient {
 
     @GetMapping("/getHashFromZset")
     Mono getHashFromZset();
+
+    @GetMapping("/lock")
+    Mono lock();
 }
