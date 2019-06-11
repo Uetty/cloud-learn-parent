@@ -182,7 +182,13 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
             return tryLockInnerAsync(key, leaseTime, unit, threadId);
         }
         //默认等待时间
-        return tryLockInnerAsync(key, LOCK_EXPIRATION_INTERVAL_SECONDS, TimeUnit.SECONDS, threadId);
+        Mono<Long> mono = tryLockInnerAsync(key, LOCK_EXPIRATION_INTERVAL_SECONDS, TimeUnit.SECONDS, threadId);
+        return mono.doOnSuccess(ttl -> {
+            if (ttl == null) {
+                //过期时间不为空，进入竞争锁状态
+                scheduleExpirationRenewal(key, threadId);
+            }
+        });
     }
 
     @SuppressWarnings("unchecked")
@@ -197,14 +203,7 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
         //hash key（uuid+threadid）
         params.add(getLockName(threadId));
         ReactiveRedisTemplate<String, Object> template = (ReactiveRedisTemplate<String, Object>) this.template;
-        return template.execute(ScriptConfig.<T>getScript(ScriptConfig.ScriptType.LOCK), keys, params)
-                .next()
-                .doOnSuccess(ttl -> {
-                    if (ttl == null) {
-                        //过期时间不为空，进入竞争锁状态
-                        scheduleExpirationRenewal(key, threadId);
-                    }
-                });
+        return template.execute(ScriptConfig.<T>getScript(ScriptConfig.ScriptType.LOCK), keys, params).next();
     }
 
     /**
