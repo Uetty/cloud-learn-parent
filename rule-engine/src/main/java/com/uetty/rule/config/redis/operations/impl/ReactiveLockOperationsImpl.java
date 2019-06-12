@@ -21,6 +21,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 
@@ -237,8 +238,33 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
         }
     }
 
-    public Mono<Boolean> tryLock(String key, long leaseTime, long threadId, TimeUnit unit) throws InterruptedException {
-        return null;
+    public Mono<Boolean> tryLock(String key, long waitTime, long leaseTime, TimeUnit unit) throws InterruptedException {
+        AtomicLong time = new AtomicLong(unit.toMillis(waitTime));
+        AtomicLong current = new AtomicLong(System.currentTimeMillis());
+        final long threadId = Thread.currentThread().getId();
+        return tryAcquire(key, leaseTime, unit, threadId)
+                .map(ttl -> {
+                    if (ttl == null) {
+                        return true;
+                    }
+                    time.addAndGet(-(System.currentTimeMillis() - current.get()));
+                    if (time.get() <= 0) {
+                        acquireFailed(threadId);
+                        return false;
+                    }
+                    current.set(System.currentTimeMillis());
+                    //订阅
+                    subscribe(key)
+                            .doOnSuccess(a -> {
+
+                            })
+                            .subscribe();
+                    return false;
+                });
+    }
+
+    private void acquireFailed(long threadId) {
+
     }
 
     public void lock(long var1, TimeUnit var3) {
