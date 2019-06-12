@@ -135,7 +135,6 @@ public class Convert {
                 }
                 field.setAccessible(accessFlag);// 恢复访问控制权限
             } catch (IllegalAccessException e) {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
             }
         }

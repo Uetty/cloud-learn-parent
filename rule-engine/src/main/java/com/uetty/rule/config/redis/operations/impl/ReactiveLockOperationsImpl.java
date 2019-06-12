@@ -6,13 +6,13 @@ import com.uetty.rule.config.redis.lock.LockPubSub;
 import com.uetty.rule.config.redis.operations.ReactiveLockOperations;
 import com.uetty.rule.config.redis.script.ScriptConfig;
 import com.uetty.rule.config.redis.template.ClassReactiveRedisTemplate;
+import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timeout;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.connection.ReactiveSubscription;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.nio.ByteBuffer;
@@ -199,7 +199,7 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
         keys.add(key);
         List<Object> params = Lists.newArrayList();
         //初始过期时间
-        params.add((int)internalLockLeaseTime);
+        params.add((int) internalLockLeaseTime);
         //hash key（uuid+threadid）
         params.add(getLockName(threadId));
         ReactiveRedisTemplate<String, Object> template = (ReactiveRedisTemplate<String, Object>) this.template;
@@ -214,8 +214,12 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
      */
     @SuppressWarnings("unchecked")
     private void scheduleExpirationRenewal(String key, long threadId) {
+        if (expirationRenewalMap.containsKey(getEntryName(key))) {
+            return;
+        }
         ReactiveRedisTemplate<String, Object> template = (ReactiveRedisTemplate<String, Object>) this.template;
-        Flux<Boolean> repeat = template.execute(ScriptConfig.<Boolean>getScript(ScriptConfig.ScriptType.SCHEDULE_LOCK),
+        HashedWheelTimer hashedWheelTimer = new HashedWheelTimer();
+        Timeout task = hashedWheelTimer.newTimeout(timeout -> template.execute(ScriptConfig.<Boolean>getScript(ScriptConfig.ScriptType.SCHEDULE_LOCK),
                 Lists.newArrayList(key),
                 Lists.newArrayList(internalLockLeaseTime, getLockName(threadId)))
                 .next()
@@ -225,7 +229,12 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
                         scheduleExpirationRenewal(key, threadId);
                     }
                 })
-                .repeat();
+                .subscribe(), internalLockLeaseTime / 3, TimeUnit.MILLISECONDS);
+
+
+        if (expirationRenewalMap.putIfAbsent(getEntryName(key), task) != null) {
+            task.cancel();
+        }
     }
 
     public Mono<Boolean> tryLock(String key, long leaseTime, long threadId, TimeUnit unit) throws InterruptedException {
