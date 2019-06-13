@@ -2,6 +2,7 @@ package com.uetty.rule.config.redis.operations.impl;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.uetty.cloud.utils.Convert;
 import com.uetty.rule.config.redis.lock.LockPubSub;
 import com.uetty.rule.config.redis.operations.ReactiveLockOperations;
 import com.uetty.rule.config.redis.script.ScriptConfig;
@@ -72,9 +73,9 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
 
     private Mono<Boolean> tryAcquireOnceAsync(String key, long leaseTime, TimeUnit unit, long threadId) {
         if (leaseTime != -1) {
-            return tryLockInnerAsync(key, leaseTime, unit, threadId);
+            return tryLockInnerAsync(key, leaseTime, unit, threadId).map(Convert::toBool);
         }
-        return tryLockInnerAsync(key, LOCK_EXPIRATION_INTERVAL_SECONDS, TimeUnit.SECONDS, threadId);
+        return tryLockInnerAsync(key, LOCK_EXPIRATION_INTERVAL_SECONDS, TimeUnit.SECONDS, threadId).map(Convert::toBool);
     }
 
     public boolean tryLock(long time, TimeUnit unit) throws InterruptedException {
@@ -193,7 +194,7 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
     }
 
     @SuppressWarnings("unchecked")
-    private <T> Mono<T> tryLockInnerAsync(String key, long leaseTime, TimeUnit unit, long threadId) {
+    private   Mono<Long> tryLockInnerAsync(String key, long leaseTime, TimeUnit unit, long threadId) {
         internalLockLeaseTime = unit.toMillis(leaseTime);
         //redis key(锁名)
         List<String> keys = Lists.newArrayList();
@@ -204,7 +205,7 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
         //hash key（uuid+threadid）
         params.add(getLockName(threadId));
         ReactiveRedisTemplate<String, Object> template = (ReactiveRedisTemplate<String, Object>) this.template;
-        return template.execute(ScriptConfig.<T>getScript(ScriptConfig.ScriptType.LOCK), keys, params).next();
+        return template.execute(ScriptConfig.<Long>getScript(ScriptConfig.ScriptType.LOCK), keys, params).next();
     }
 
     /**

@@ -57,7 +57,7 @@ public class RedisController implements RedisLuaApi {
 
     @Override
     @GetMapping("/lock")
-    public Mono lock() {
+    public Mono<Boolean> lock() {
         return redisService.redisLock();
     }
 }
