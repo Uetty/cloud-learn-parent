@@ -3,13 +3,15 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.uetty</groupId>
-        <artifactId>cloud-learn-parent</artifactId>
-        <version>1.2.2-Beta</version>
-        <relativePath>../</relativePath>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.1.5.RELEASE</version>
+        <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <artifactId>common</artifactId>
-    <name>common</name>
+    <groupId>com.uetty</groupId>
+    <artifactId>translation</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>translation</name>
     <description>Demo project for Spring Boot</description>
 
     <properties>
@@ -18,19 +20,15 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.squareup.okhttp3</groupId>
-            <artifactId>okhttp</artifactId>
+            <groupId>com.uetty</groupId>
+            <artifactId>common</artifactId>
+            <version>1.2.2-Beta</version>
         </dependency>
         <dependency>
-            <groupId>org.jooq</groupId>
-            <artifactId>jooq-meta</artifactId>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
         </dependency>
-     <!--
-        <dependency>
-            <groupId>org.jooq</groupId>
-            <artifactId>jooq-codegen</artifactId>
-        </dependency>
-     -->
     </dependencies>
 
     <build>
@@ -38,9 +36,6 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <configuration>
-                   <skip>true</skip>
-                </configuration>
             </plugin>
         </plugins>
     </build>
