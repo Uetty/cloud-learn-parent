@@ -11,20 +11,25 @@ import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timeout;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import org.reactivestreams.Publisher;
+import org.springframework.data.redis.connection.ReactiveScriptingCommands;
 import org.springframework.data.redis.connection.ReactiveSubscription;
+import org.springframework.data.redis.connection.ReturnType;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
+import org.springframework.util.Assert;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.nio.ByteBuffer;
-import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
+import java.util.function.Function;
 
 /**
  * redis lock(重入锁)
@@ -46,6 +51,21 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
         return serializationContext.getHashValueSerializationPair().write(key);
     }
 
+    protected ByteBuffer scriptBytes(String key) {
+        return serializationContext.getStringSerializationPair().getWriter().write(key);
+    }
+
+    private <T> Flux<T> createFlux(Function<ReactiveScriptingCommands, Publisher<T>> function) {
+        Assert.notNull(function, "Function must not be null!");
+        return template.createFlux(connection -> function.apply(connection.scriptingCommands()));
+    }
+
+    private <T> Mono<T> createMono(Function<ReactiveScriptingCommands, Publisher<T>> function) {
+        Assert.notNull(function, "Function must not be null!");
+        return template.createMono(connection -> function.apply(connection.scriptingCommands()));
+    }
+
+
     public Mono<Void> lock(String key) {
         try {
             return lockInterruptibly(key);
@@ -56,6 +76,28 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
 
     public Mono<Void> lockInterruptibly(String key) throws InterruptedException {
         return lockInterruptibly(key, -1, null);
+    }
+
+    public Mono<Void> lockInterruptibly(String key, long leaseTime, TimeUnit unit) throws InterruptedException {
+        long threadId = Thread.currentThread().getId();
+        AtomicReference<Long> tta = new AtomicReference<>();
+        //尝试获取锁
+        return tryAcquire(key, leaseTime, unit, threadId)
+                .filter(Objects::nonNull)//过期时间为空，则代表获取到锁。
+                .flatMapMany(time -> this.subscribe(key))//没获取到锁，订阅该key，等待其他线程释放锁，其他线程释放锁的时候发布
+                .map(v -> tryAcquire(key, leaseTime, unit, threadId)//上锁后再获取一次锁
+                        .flatMap(ttl -> { //监听订阅，获取发布的信息
+                            tta.set(ttl);
+                            if (ttl >= 0) {
+                                return getEntry(key).flatMap(message -> tryAcquire(key, ttl, TimeUnit.MILLISECONDS, threadId));
+                            } else {
+                                return getEntry(key).flatMap(message -> tryAcquire(key, 0L, TimeUnit.MILLISECONDS, threadId));
+                            }
+                        })
+                        .repeat(() -> tta.get() != null)//循环，直到ttl为null
+                        .subscribe()
+                )
+                .then(this.unsubscribe(key));//取消订阅
     }
 
     @Override
@@ -116,27 +158,6 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
         return null;
     }
 
-    public Mono<Void> lockInterruptibly(String key, long leaseTime, TimeUnit unit) throws InterruptedException {
-        long threadId = Thread.currentThread().getId();
-        AtomicReference<Long> tta = new AtomicReference<>();
-        //尝试获取锁
-        return tryAcquire(key, leaseTime, unit, threadId)
-                .filter(Objects::nonNull)//过期时间为空，则代表获取到锁。
-                .flatMapMany(time -> this.subscribe(key))//没获取到锁，订阅该key，等待其他线程释放锁，其他线程释放锁的时候发布
-                .map(v -> tryAcquire(key, leaseTime, unit, threadId)//上锁后再获取一次锁
-                        .flatMap(ttl -> { //监听订阅，获取发布的信息
-                            tta.set(ttl);
-                            if (ttl >= 0) {
-                                return getEntry(key).flatMap(message -> tryAcquire(key, ttl, TimeUnit.MILLISECONDS, threadId));
-                            } else {
-                                return getEntry(key).flatMap(message -> tryAcquire(key, 0L, TimeUnit.MILLISECONDS, threadId));
-                            }
-                        })
-                        .repeat(() -> tta.get() != null)//循环，直到ttl为null
-                        .subscribe()
-                )
-                .then(this.unsubscribe(key));//取消订阅
-    }
 
     private Mono<? extends ReactiveSubscription.Message<String, ?>> getEntry(String key) {
         return template.listenToChannel(getEntryName(key)).next();
@@ -193,19 +214,11 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
         });
     }
 
-    @SuppressWarnings("unchecked")
-    private   Mono<Long> tryLockInnerAsync(String key, long leaseTime, TimeUnit unit, long threadId) {
+    private Mono<Long> tryLockInnerAsync(String key, long leaseTime, TimeUnit unit, long threadId) {
         internalLockLeaseTime = unit.toMillis(leaseTime);
-        //redis key(锁名)
-        List<String> keys = Lists.newArrayList();
-        keys.add(key);
-        List<Object> params = Lists.newArrayList();
-        //初始过期时间
-        params.add((int) internalLockLeaseTime);
-        //hash key（uuid+threadid）
-        params.add(getLockName(threadId));
-        ReactiveRedisTemplate<String, Object> template = (ReactiveRedisTemplate<String, Object>) this.template;
-        return template.execute(ScriptConfig.<Long>getScript(ScriptConfig.ScriptType.LOCK), keys, params).next();
+        DefaultRedisScript<Long> redisScript = ScriptConfig.getScript(ScriptConfig.ScriptType.LOCK);
+        return createFlux(commands -> commands.<Long>eval(scriptBytes(redisScript.getScriptAsString()), ReturnType.INTEGER, 1,
+                scriptBytes(key), rawKey((int) internalLockLeaseTime), scriptBytes(getLockName(threadId)))).next();
     }
 
     /**
@@ -239,29 +252,23 @@ public class ReactiveLockOperationsImpl implements ReactiveLockOperations {
         }
     }
 
-    public Mono<Boolean> tryLock(String key, long waitTime, long leaseTime, TimeUnit unit) throws InterruptedException {
-        AtomicLong time = new AtomicLong(unit.toMillis(waitTime));
-        AtomicLong current = new AtomicLong(System.currentTimeMillis());
+    public boolean tryLock(String key, long waitTime, long leaseTime, TimeUnit unit) {
+        long time = unit.toMillis(waitTime);
+        long current = System.currentTimeMillis();
         final long threadId = Thread.currentThread().getId();
-        return tryAcquire(key, leaseTime, unit, threadId)
-                .map(ttl -> {
-                    if (ttl == null) {
-                        return true;
-                    }
-                    time.addAndGet(-(System.currentTimeMillis() - current.get()));
-                    if (time.get() <= 0) {
-                        acquireFailed(threadId);
-                        return false;
-                    }
-                    current.set(System.currentTimeMillis());
-                    //订阅
-                    subscribe(key)
-                            .doOnSuccess(a -> {
-
-                            })
-                            .subscribe();
-                    return false;
-                });
+        Long ttl = tryAcquire(key, leaseTime, unit, threadId).toFuture().join();
+        // lock acquired
+        if (ttl == null) {
+            return true;
+        }
+        time -= (System.currentTimeMillis() - current);
+        if (time <= 0) {
+            acquireFailed(threadId);
+            return false;
+        }
+        current = System.currentTimeMillis();
+        subscribe(key);
+        return false;
     }
 
     private void acquireFailed(long threadId) {
