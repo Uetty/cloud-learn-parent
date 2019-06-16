@@ -35,7 +35,7 @@ public class TranslationYouDao {
      * @param from    语言
      * @return 翻译多个语言
      */
-    public String translateMore(String content, String from, String to) throws IOException {
+    public String translateMore(String content, String from, String to) {
         Map<String, String> resultMap = Maps.newHashMap();
         RequestYouDao request = new RequestYouDao();
         request.setQ(content);
@@ -52,14 +52,20 @@ public class TranslationYouDao {
                 .post(builder.build())
                 .header("Content-Type", "application/json")
                 .build();
-        Response execute = client.newCall(requset).execute();
-        assert execute.body() != null;
-        ResponseYouDao responseYouDao = JACKSON_UTIL.json2Obj(execute.body().string(), ResponseYouDao.class);
-        return responseYouDao.getTranslation().stream().findAny().orElse("");
+        Response execute = null;
+        try {
+            execute = client.newCall(requset).execute();
+            assert execute.body() != null;
+            ResponseYouDao responseYouDao = JACKSON_UTIL.json2Obj(execute.body().string(), ResponseYouDao.class);
+            return responseYouDao.getTranslation().stream().findAny().orElse("");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return "";
     }
 
     public static void main(String[] args) throws IOException {
-        new TranslationYouDao().translateMore("one","en", "ja");
+        new TranslationYouDao().translateMore("one", "en", "ja");
     }
 
     @Data
