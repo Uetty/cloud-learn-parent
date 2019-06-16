@@ -1,6 +1,5 @@
 package com.uetty.cloud.utils.translate;
 
-import com.google.common.collect.Maps;
 import com.uetty.cloud.utils.Convert;
 import com.uetty.cloud.utils.JacksonUtil;
 import com.uetty.cloud.utils.encryption.SHA256Util;
@@ -12,6 +11,7 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.Map;
 
 /**
@@ -36,9 +36,8 @@ public class TranslationYouDao {
      * @return 翻译多个语言
      */
     public String translateMore(String content, String from, String to) {
-        Map<String, String> resultMap = Maps.newHashMap();
         RequestYouDao request = new RequestYouDao();
-        request.setQ(content);
+        request.setQ(new String(content.getBytes(), Charset.forName("UTF-8")));
         request.setFrom(from);
         request.setTo(to);
         FormBody.Builder builder = new FormBody.Builder();
@@ -56,10 +55,12 @@ public class TranslationYouDao {
         try {
             execute = client.newCall(requset).execute();
             assert execute.body() != null;
-            ResponseYouDao responseYouDao = JACKSON_UTIL.json2Obj(execute.body().string(), ResponseYouDao.class);
+            String json = execute.body().string();
+            System.err.println(json);
+            ResponseYouDao responseYouDao = JACKSON_UTIL.json2Obj(json, ResponseYouDao.class);
             return responseYouDao.getTranslation().stream().findAny().orElse("");
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println(e);
         }
         return "";
     }

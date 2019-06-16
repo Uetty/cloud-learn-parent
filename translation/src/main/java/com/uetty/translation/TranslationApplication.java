@@ -18,6 +18,9 @@ public class TranslationApplication {
         String json = FileUtil.readFile(property + "/config.json");
         Config config =  JacksonUtil.jackson.json2Obj(json, Config.class);
         Map<String, Map<String, List<String>>> data = ExcelUtil.getData(config.getXmlPath());
+        String ss = JacksonUtil.jackson.obj2Json(data);
+        System.err.println(ss);
+        System.err.println(new String(ss.getBytes(), "UTF-8"));
         transAndOut(config, data);
     }
 

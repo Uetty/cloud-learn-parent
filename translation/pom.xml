@@ -40,7 +40,7 @@
                     <encoding>UTF-8</encoding>
                     <archive>
                         <manifest>
-                            <mainClass>com.uetty.translation.TranslationApplication`</mainClass>
+                            <mainClass>com.uetty.translation.TranslationApplication</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
