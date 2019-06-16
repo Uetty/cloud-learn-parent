@@ -15,7 +15,7 @@ public class TranslationApplication {
 
     public static void main(String[] args) throws IOException {
         String property = System.getProperty("user.dir");
-        String json = FileUtil.readFile(property + "/translation/target/classes/config.json");
+        String json = FileUtil.readFile(property + "/translation/config.json");
         Config config = JacksonUtil.jackson.json2Obj(json, Config.class);
         Map<String, Map<String, List<String>>> data = ExcelUtil.getData(config.getXmlPath());
         transAndOut(config, data);
