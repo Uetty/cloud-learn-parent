@@ -3,6 +3,7 @@ package com.uetty.cloud.utils.file;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.charset.Charset;
 
 public class FileUtil {
 
@@ -27,7 +28,7 @@ public class FileUtil {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return sb.toString();
+        return new String(sb.toString().getBytes(), Charset.forName("UTF-8"));
     }
 
 }

@@ -12,7 +12,6 @@
     <artifactId>translation</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>translation</name>
-    <description>Demo project for Spring Boot</description>
 
     <properties>
         <java.version>1.8</java.version>
@@ -34,8 +33,29 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.5.5</version>
+                <configuration>
+                    <encoding>UTF-8</encoding>
+                    <archive>
+                        <manifest>
+                            <mainClass>com.uetty.translation.TranslationApplication`</mainClass>
+                        </manifest>
+                    </archive>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
