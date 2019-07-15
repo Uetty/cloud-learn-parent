@@ -2,7 +2,6 @@ package com.uetty.rule.service;
 
 import com.google.common.collect.Lists;
 import com.uetty.rule.config.redis.operations.ReactiveClassOperations;
-import com.uetty.rule.config.redis.operations.ReactiveLockOperations;
 import com.uetty.rule.config.redis.operations.ReactiveLuaOperations;
 import com.uetty.rule.config.redis.template.RedisTemplateRule;
 import com.uetty.rule.entity.User;
@@ -51,7 +50,13 @@ public class RedisService {
     }
 
     public Mono<Boolean> redisLock(){
-        ReactiveLockOperations lock = redisTemplateRule.opsForLock();
-        return lock.tryLock("key");
+        User user = new User();
+        user.setUserId(200);
+        user.setUserName("李四");
+        return  redisTemplateRule.opsForHash().put("user:detail","200",user).flatMap(a->{
+            user.setUserId(100);
+            user.setUserName("张三");
+            return redisTemplateRule.opsForHash().put("user:detail","100",user);
+        });
     }
 }

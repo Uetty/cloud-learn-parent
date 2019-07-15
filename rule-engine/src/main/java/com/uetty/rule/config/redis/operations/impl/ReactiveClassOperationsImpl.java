@@ -129,7 +129,7 @@ public class ReactiveClassOperationsImpl<H, HK, HV> implements ReactiveClassOper
     public Mono<Boolean> putClass(H key, Collection<HV> values) {
         Map<String, Object> map = Maps.newHashMap();
         Class<?> clazz = null;
-        try {
+            try {
             Field[] declaredFields = null;
             for (HV hv : values) {
                 if (clazz == null) {
